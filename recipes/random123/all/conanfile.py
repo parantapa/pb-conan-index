@@ -7,9 +7,7 @@ from conan.tools.scm import Git
 class Random123(ConanFile):
     name = "random123"
     version = "v1.14.0"
-    exports_sources = "include/*/*.h", "include/*/*.hpp"
     no_copy_source = True
-    package_type = "header-library"
 
     def source(self):
         git = Git(self)
