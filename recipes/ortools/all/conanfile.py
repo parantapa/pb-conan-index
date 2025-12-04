@@ -1,34 +1,32 @@
 # type: ignore
 from conan import ConanFile
-from conan.tools.cmake import CMakeToolchain, CMake, cmake_layout, CMakeDeps
+from conan.tools.cmake import CMakeToolchain, CMakeDeps, CMake, cmake_layout
 from conan.tools.scm import Git
 
 
 class ORTools(ConanFile):
-    name = "or-tools"
-    version = "v9.14"
-    no_copy_source = True
+    name = "ortools"
+    version = "9.14"
 
     settings = "os", "compiler", "build_type", "arch"
-    options = {"shared": [True, False], "fPIC": [True, False]}
-    default_options = {"shared": False, "fPIC": True}
 
     def source(self):
         git = Git(self)
         git.clone(
             url="https://github.com/google/or-tools",
             target=".",
-            args=["--branch", self.version, "--depth", "1"],
+            args=["--branch", f"v{self.version}", "--depth", "1"],
         )
 
     def layout(self):
         cmake_layout(self)
 
     def generate(self):
-        deps = CMakeDeps(self)
-        deps.generate()
         tc = CMakeToolchain(self)
         tc.generate()
+
+        deps = CMakeDeps(self)
+        deps.generate()
 
     def build(self):
         cmake = CMake(self)
@@ -50,4 +48,13 @@ class ORTools(ConanFile):
         cmake.install()
 
     def package_info(self):
-        self.cpp_info.libs = ["ortools"]
+        self.cpp_info.set_property("cmake_find_mode", "none")
+        self.cpp_info.builddirs = [
+            "lib/cmake/ZLIB",
+            "lib/cmake/absl",
+            "lib/cmake/bzip2",
+            "lib/cmake/ortools",
+            "lib/cmake/protobuf",
+            "lib/cmake/re2",
+            "lib/cmake/utf8_range",
+        ]
