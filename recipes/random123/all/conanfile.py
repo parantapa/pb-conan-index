@@ -6,7 +6,7 @@ from conan.tools.scm import Git
 
 class Random123(ConanFile):
     name = "random123"
-    version = "v1.14.0"
+    version = "1.14.0"
     no_copy_source = True
 
     def source(self):
@@ -14,7 +14,7 @@ class Random123(ConanFile):
         git.clone(
             url="https://github.com/DEShawResearch/random123.git",
             target=".",
-            args=["--branch", self.version, "--depth", "1"],
+            args=["--branch", f"v{self.version}", "--depth", "1"],
         )
 
     def package(self):
