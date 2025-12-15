@@ -8,7 +8,6 @@ from conan.tools.files import copy
 
 class HpcUtilsRecipe(ConanFile):
     name = "hpc-utils"
-    version = "0.1.0"
 
     license = "MIT"
     author = "Parantapa Bhattacharya <pb@parantapa.net>"
@@ -24,7 +23,7 @@ class HpcUtilsRecipe(ConanFile):
         git.clone(
             url="https://github.com/parantapa/hpc-utils",
             target="git-src",
-            args=["--branch", f"{self.version}", "--depth", "1"],
+            args=["--branch", self.version, "--depth", "1"],
         )
 
         checkout_dir = os.path.join(self.source_folder, "git-src")
