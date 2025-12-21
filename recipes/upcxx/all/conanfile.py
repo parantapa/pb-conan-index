@@ -2,10 +2,10 @@
 # fmt off
 import os
 from subprocess import run
+from pathlib import Path
 
 from conan import ConanFile
-from conan.tools.files import get, replace_in_file, rmdir
-from conan.tools.gnu import Autotools, AutotoolsToolchain
+from conan.tools.files import get
 from conan.tools.layout import basic_layout
 
 
@@ -16,7 +16,6 @@ class UPCXXRecipe(ConanFile):
     settings = "os", "arch", "compiler", "build_type"
     options = {
         "shared": [True, False],
-        "fPIC": [True, False],
         "cuda": [True, False],
         "hip": [True, False],
         "ze": [True, False],
@@ -31,7 +30,6 @@ class UPCXXRecipe(ConanFile):
     }
     default_options = {
         "shared": False,
-        "fPIC": True,
         "cuda": False,
         "hip": False,
         "ze": False,
@@ -45,27 +43,18 @@ class UPCXXRecipe(ConanFile):
         "pmi-version": "x",
     }
 
-    def config_options(self):
-        if self.settings.os == "Windows":
-            del self.options.fPIC
-
-    def configure(self):
-        if self.options.shared:
-            self.options.rm_safe("fPIC")
-
     def layout(self):
         basic_layout(self, src_folder="src")
 
     def source(self):
         get(self, **self.conan_data["sources"][self.version], strip_root=True)
 
-    def generate(self):
-        toolchain = AutotoolsToolchain(self)
-        toolchain.configure_args += [
-            "--disable-mpi-compat",
-            f"--with-pmi-version={self.options.get_safe('pmi-version')}",
-            "--enable-single=opt",
-        ]
+    def build(self):
+        cmd = ["./configure", f"--prefix={self.package_folder}"]
+        if self.options.get_safe("shared"):
+            cmd.extend(["--enable-shared", "--disable-static"])
+        else:
+            cmd.extend(["--disable-shared", "--enable-static"])
 
         for opt in [
             "cuda",
@@ -80,99 +69,110 @@ class UPCXXRecipe(ConanFile):
             "pmi",
         ]:
             if self.options.get_safe(opt):
-                toolchain.configure_args.append(f"--enable-{opt}")
+                cmd.append(f"--enable-{opt}")
             else:
-                toolchain.configure_args.append(f"--disable-{opt}")
+                cmd.append(f"--disable-{opt}")
 
-        toolchain.generate()
+        cmd.append("--disable-mpi-compat")
+        cmd.append(f"--with-pmi-version={self.options.get_safe('pmi-version')}")
 
-    def build(self):
-        autotools = Autotools(self)
-        autotools.configure()
-        autotools.make()
+        print("Configure command:", cmd)
+        run(cmd, cwd=self.source_folder, check=True)
+
+        cmd = ["make", "all"]
+        print("Make command:", cmd)
+        run(cmd, cwd=self.source_folder, check=True)
 
     def package(self):
-        autotools = Autotools(self)
-        autotools.install()
+        Path(self.package_folder).mkdir(parents=True, exist_ok=True)
 
-        rmdir(self, os.path.join(self.package_folder, "home"))
-        rmdir(self, os.path.join(self.package_folder, "share"))
-        replace_in_file(
-            self,
-            os.path.join(self.package_folder, "bin", "upcxx-meta"),
-            "//upcxx.",
-            os.path.join(self.package_folder, "upcxx."),
+        cmd = ["make", "install"]
+        print("Install command:", cmd)
+        run(cmd, cwd=self.source_folder, check=True)
+
+    def _upcxx_meta(self, codemode, threadmode, network):
+        env = dict(os.environ)
+        env["UPCXX_CODEMODE"] = codemode
+        env["UPCXX_THREADMODE"] = threadmode
+        env["UPCXX_NETWORK"] = network
+
+        cp = run(
+            ["./bin/upcxx-meta", "CPPFLAGS"],
+            env=env,
+            cwd=self.package_folder,
+            capture_output=True,
+            check=True,
+            text=True,
+        )
+        stdout = cp.stdout.split()
+        defines = [x.removeprefix("-D") for x in stdout if x.startswith("-D")]
+        includedirs = [x.removeprefix("-I") for x in stdout if x.startswith("-I")]
+        includedirs = [d for d in includedirs if d.startswith(self.package_folder)]
+
+        cp = run(
+            ["./bin/upcxx-meta", "LIBS"],
+            env=env,
+            cwd=self.package_folder,
+            capture_output=True,
+            check=True,
+            text=True,
+        )
+        stdout = cp.stdout.split()
+        all_libs = [x.removeprefix("-l") for x in stdout if x.startswith("-l")]
+        libdirs = [x.removeprefix("-L") for x in stdout if x.startswith("-L")]
+
+        libs = []
+        system_libs = []
+        for lib in all_libs:
+            if lib.startswith("upcxx") or lib.startswith("gasnet"):
+                libs.append(lib)
+            else:
+                system_libs.append(lib)
+
+        libdirs = [d for d in libdirs if d.startswith(self.package_folder)]
+
+        cp = run(
+            ["./bin/upcxx-meta", "GASNET_PREFIX"],
+            env=env,
+            cwd=self.package_folder,
+            capture_output=True,
+            check=True,
+            text=True,
+        )
+        gasnet_prefix = cp.stdout.strip()
+
+        return dict(
+            defines=defines,
+            includedirs=includedirs,
+            libs=libs,
+            libdirs=libdirs,
+            system_libs=system_libs,
+            gasnet_prefix=gasnet_prefix,
         )
 
-        for backend in ["udp", "mpi", "smp", "ucx", "ibv", "ofi"]:
-            if self.options.get_safe(backend):
-                for threadmode in ["par", "seq"]:
-                    replace_in_file(
-                        self,
-                        os.path.join(
-                            self.package_folder,
-                            f"upcxx.opt.gasnet_{threadmode}.{backend}",
-                            "bin",
-                            "upcxx-meta",
-                        ),
-                        "//upcxx.",
-                        os.path.join(self.package_folder, "upcxx."),
-                    )
-                    replace_in_file(
-                        self,
-                        os.path.join(
-                            self.package_folder,
-                            f"upcxx.opt.gasnet_{threadmode}.{backend}",
-                            "bin",
-                            "upcxx-meta",
-                        ),
-                        "//gasnet.",
-                        os.path.join(self.package_folder, "gasnet."),
-                    )
-
     def package_info(self):
-        self.cpp_info.libdirs = []
         self.cpp_info.includedirs = []
+        self.cpp_info.libdirs = []
+        self.cpp_info.bindirs = []
 
-        env = dict(os.environ)
-        for backend in ["udp", "mpi", "smp", "ucx", "ibv", "ofi"]:
-            if self.options.get_safe(backend):
-                for threadmode in ["par", "seq"]:
-                    env["UPCXX_THREADMODE"] = threadmode
-                    env["UPCXX_NETWORK"] = backend
+        for codemode in ["opt", "debug"]:
+            for threadmode in ["seq", "par"]:
+                for network in ["udp", "mpi", "smp", "ucx", "ibv", "ofi"]:
+                    if self.options.get_safe(network):
+                        component = f"{codemode}-{threadmode}-{network}"
+                        meta = self._upcxx_meta(codemode, threadmode, network)
 
-                    cp = run(
-                        ["./bin/upcxx-meta", "CPPFLAGS"],
-                        env=env,
-                        cwd=self.package_folder,
-                        capture_output=True,
-                        check=True,
-                        text=True,
-                    )
-                    stdout = cp.stdout.split()
-                    defines = [x.removeprefix("-D") for x in stdout if x.startswith("-D")]
-                    includedirs = [x.removeprefix("-I") for x in stdout if x.startswith("-I")]
-                    includedirs.append(os.path.join(self.package_folder, "include"))
+                        self.cpp_info.components[component].defines = meta["defines"]
+                        self.cpp_info.components[component].includedirs = meta[
+                            "includedirs"
+                        ]
+                        self.cpp_info.components[component].libs = meta["libs"]
+                        self.cpp_info.components[component].system_libs = meta[
+                            "system_libs"
+                        ]
+                        self.cpp_info.components[component].libdirs = meta["libdirs"]
+                        self.cpp_info.components[component].set_property(
+                            "cmake_target_name", f"upcxx::{component}"
+                        )
 
-                    cp = run(
-                        ["./bin/upcxx-meta", "LIBS"],
-                        env=env,
-                        cwd=self.package_folder,
-                        capture_output=True,
-                        check=True,
-                        text=True,
-                    )
-                    stdout = cp.stdout.split()
-                    libs = [x.removeprefix("-l") for x in stdout if x.startswith("-l")]
-                    libdirs = [x.removeprefix("-L") for x in stdout if x.startswith("-L")]
-                    libs.append(f"gasnet-{backend}-{threadmode}")
-                    libdirs.append(os.path.join(self.package_folder, "lib"))
-
-                    self.cpp_info.components[f"upcxx-{backend}-{threadmode}"].libs = libs
-                    self.cpp_info.components[f"upcxx-{backend}-{threadmode}"].libdirs = libdirs
-                    self.cpp_info.components[f"upcxx-{backend}-{threadmode}"].includedirs = includedirs
-                    self.cpp_info.components[f"upcxx-{backend}-{threadmode}"].defines = defines
-                    self.cpp_info.components[f"upcxx-{backend}-{threadmode}"].set_property("cmake_target_name", f"upcxx::{backend}-{threadmode}")
-
-        self.runenv_info.define_path("GASNET_PREFIX", self.package_folder)
         self.runenv_info.prepend_path("PATH", os.path.join(self.package_folder, "bin"))
