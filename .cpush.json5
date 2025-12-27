@@ -1,0 +1,6 @@
+{
+    project: "pb-conan-index",
+    remotes: {
+        rivanna: "rivanna:pb-conan-index",
+    }
+}
