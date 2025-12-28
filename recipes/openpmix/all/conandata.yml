@@ -1,0 +1,5 @@
+sources:
+  "5.0.9":
+    url: "https://github.com/openpmix/openpmix/releases/download/v5.0.9/pmix-5.0.9.tar.gz"
+    sha256: "11b9911aadaac590e5b02749caa618837de9fb644183c1bdc04378b54bf396bb"
+    strip_root: true
