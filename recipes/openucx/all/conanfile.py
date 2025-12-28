@@ -7,8 +7,8 @@ from conan.tools.layout import basic_layout
 from conan.tools.gnu import AutotoolsToolchain, Autotools, PkgConfigDeps, PkgConfig
 
 
-class OpenPmixRecipe(ConanFile):
-    name = "openpmix"
+class OpenUCXRecipe(ConanFile):
+    name = "openucx"
 
     # Optional metadata
     license = "BSD-3-Clause"
@@ -18,14 +18,19 @@ class OpenPmixRecipe(ConanFile):
 
     # Binary configuration
     settings = "os", "compiler", "build_type", "arch"
-    options = {"shared": [True, False], "fPIC": [True, False]}
-    default_options = {"shared": False, "fPIC": True}
+    options = {
+        "shared": [True],
+        "fPIC": [True, False],
+        "verbs": [True, False],
+        "avx": [True, False],
+    }
+    default_options = {"shared": True, "fPIC": True, "verbs": False, "avx": True}
 
     def requirements(self):
-        self.requires("hwloc/2.11.1")
-        self.requires("libevent/2.1.12")
         self.requires("zlib/1.3.1")
-        self.requires("zlib-ng/2.3.2")
+        self.requires("zstd/1.5.7")
+        if self.options.get_safe("verbs"):
+            self.requires("rdma-core/52.0")
 
     def source(self):
         get(self, **self.conan_data["sources"][self.version])
@@ -42,6 +47,16 @@ class OpenPmixRecipe(ConanFile):
         deps.generate()
 
         toolchain = AutotoolsToolchain(self, prefix=self.package_folder)
+        toolchain.configure_args.append("--disable-doxygen-doc")
+        toolchain.configure_args.append("--disable-doxygen-man")
+
+        if self.options.get_safe("avx"):
+            toolchain.configure_args.append("--with-avx")
+
+        if self.options.get_safe("verbs"):
+            rdma_package_folder = self.dependencies["rdma-core"].package_folder
+            toolchain.configure_args.append(f"--with-verbs={rdma_package_folder}")
+
         toolchain.generate()
 
     def build(self):
@@ -53,13 +68,14 @@ class OpenPmixRecipe(ConanFile):
         autotools = Autotools(self)
         autotools.make(target="install")
 
+        rmdir(self, os.path.join(self.package_folder, "etc"))
         rmdir(self, os.path.join(self.package_folder, "share"))
 
     def package_info(self):
         pkg_config = PkgConfig(
             self,
-            "pmix",
+            "ucx",
             os.path.join(self.package_folder, "lib/pkgconfig"),
         )
 
-        pkg_config.fill_cpp_info(self.cpp_info, is_system=False, system_libs=["m"])
+        pkg_config.fill_cpp_info(self.cpp_info, is_system=False)
