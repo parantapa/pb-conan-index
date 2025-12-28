@@ -25,6 +25,7 @@ class OpenPmixRecipe(ConanFile):
         self.requires("hwloc/2.11.1")
         self.requires("libevent/2.1.12")
         self.requires("zlib/1.3.1")
+        self.requires("zlib-ng/2.3.2")
 
     def source(self):
         get(self, **self.conan_data["sources"][self.version])
