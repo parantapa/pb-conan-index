@@ -2,9 +2,9 @@
 import os
 
 from conan import ConanFile
-from conan.tools.files import get, rmdir
+from conan.tools.files import get, rm, rename
 from conan.tools.layout import basic_layout
-from conan.tools.gnu import AutotoolsToolchain, Autotools, PkgConfigDeps, PkgConfig
+from conan.tools.gnu import AutotoolsToolchain, Autotools, PkgConfigDeps
 
 
 class OpenUCXRecipe(ConanFile):
@@ -19,18 +19,15 @@ class OpenUCXRecipe(ConanFile):
     # Binary configuration
     settings = "os", "compiler", "build_type", "arch"
     options = {
-        "shared": [True],
+        "shared": [True],  # UCX doesn't support static
         "fPIC": [True, False],
         "verbs": [True, False],
-        "avx": [True, False],
     }
-    default_options = {"shared": True, "fPIC": True, "verbs": False, "avx": True}
+    default_options = {"shared": True, "fPIC": True, "verbs": False}
 
     def requirements(self):
-        self.requires("zlib/1.3.1")
-        self.requires("zstd/1.5.7")
         if self.options.get_safe("verbs"):
-            self.requires("rdma-core/52.0")
+            self.requires("rdma-core/[>=52.0 <60]")
 
     def source(self):
         get(self, **self.conan_data["sources"][self.version])
@@ -49,14 +46,29 @@ class OpenUCXRecipe(ConanFile):
         toolchain = AutotoolsToolchain(self, prefix=self.package_folder)
         toolchain.configure_args.append("--disable-doxygen-doc")
         toolchain.configure_args.append("--disable-doxygen-man")
-
-        if self.options.get_safe("avx"):
-            toolchain.configure_args.append("--with-avx")
+        toolchain.configure_args.append("--enable-cma=yes")
+        toolchain.configure_args.append("--with-fuse3=no")
+        toolchain.configure_args.append("--with-go=no")
+        toolchain.configure_args.append("--with-java=no")
+        toolchain.configure_args.append("--with-cuda=no")
+        toolchain.configure_args.append("--with-rocm=no")
+        toolchain.configure_args.append("--with-ze=no")
+        toolchain.configure_args.append("--with-bfd=no")
+        toolchain.configure_args.append("--with-gdrcopy=no")
 
         if self.options.get_safe("verbs"):
-            rdma_package_folder = self.dependencies["rdma-core"].package_folder
-            toolchain.configure_args.append(f"--with-verbs={rdma_package_folder}")
+            toolchain.configure_args.append(f"--with-verbs=yes")
+            toolchain.configure_args.append(f"--with-mlx5=yes")
+        else:
+            toolchain.configure_args.append(f"--with-verbs=no")
+            toolchain.configure_args.append(f"--with-mlx5=no")
 
+        toolchain.configure_args.append("--with-rdmacm=no")
+        toolchain.configure_args.append("--with-doca-gpunetio=no")
+        toolchain.configure_args.append("--with-efa=no")
+        toolchain.configure_args.append("--with-knem=no")
+        toolchain.configure_args.append("--with-xpmem=no")
+        toolchain.configure_args.append("--with-ugni=no")
         toolchain.generate()
 
     def build(self):
@@ -68,14 +80,19 @@ class OpenUCXRecipe(ConanFile):
         autotools = Autotools(self)
         autotools.make(target="install")
 
-        rmdir(self, os.path.join(self.package_folder, "etc"))
-        rmdir(self, os.path.join(self.package_folder, "share"))
+        rm(self, "*.la", self.package_folder, recursive=True)
 
-    def package_info(self):
-        pkg_config = PkgConfig(
+        rename(
             self,
-            "ucx",
-            os.path.join(self.package_folder, "lib/pkgconfig"),
+            os.path.join(self.package_folder, "lib", "pkgconfig"),
+            os.path.join(self.package_folder, "lib", "_orig_pkgconfig"),
         )
 
-        pkg_config.fill_cpp_info(self.cpp_info, is_system=False)
+        rename(
+            self,
+            os.path.join(self.package_folder, "lib", "cmake"),
+            os.path.join(self.package_folder, "lib", "_orig_cmake"),
+        )
+
+    def package_info(self):
+        self.cpp_info.libs = ["ucp", "uct", "ucs", "ucm"]

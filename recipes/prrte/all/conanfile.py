@@ -2,19 +2,19 @@
 import os
 
 from conan import ConanFile
-from conan.tools.files import get, rm, rmdir, rename
+from conan.tools.files import get, rm, rmdir
 from conan.tools.layout import basic_layout
 from conan.tools.gnu import AutotoolsToolchain, Autotools, PkgConfigDeps
 
 
-class OpenPmixRecipe(ConanFile):
-    name = "openpmix"
+class PrrteRecipe(ConanFile):
+    name = "prrte"
 
     # Optional metadata
     license = "BSD-3-Clause"
     author = "Parantapa Bhattacharya <pb@parantapa.net>"
     url = "https://github.com/parantapa/pb-conan-index"
-    description = "PMIx Reference Library"
+    description = "PMIx Reference RunTime Environment"
 
     # Binary configuration
     settings = "os", "compiler", "build_type", "arch"
@@ -24,8 +24,7 @@ class OpenPmixRecipe(ConanFile):
     def requirements(self):
         self.requires("hwloc/[>=2.11.1 <3]")
         self.requires("libevent/[>=2.1.12 <3]", options=dict(with_openssl=False))
-        self.requires("zlib/[>=1.3.1 <2]")
-        self.requires("zlib-ng/[>=2.3.2 <3]")
+        self.requires("openpmix/5.0.9")
 
     def source(self):
         get(self, **self.conan_data["sources"][self.version])
@@ -42,10 +41,13 @@ class OpenPmixRecipe(ConanFile):
         deps.generate()
 
         toolchain = AutotoolsToolchain(self, prefix=self.package_folder)
-        toolchain.configure_args.append("--enable-python-bindings=no")
         toolchain.configure_args.append("--with-libev=no")
+        toolchain.configure_args.append("--with-lsf=no")
+        toolchain.configure_args.append("--with-slurm=no")
+        toolchain.configure_args.append("--with-tm=no")
         toolchain.configure_args.append("--with-libltdl=no")
-        toolchain.configure_args.append("--with-munge=no")
+        toolchain.configure_args.append("--with-sge=no")
+        toolchain.configure_args.append("--with-pbs=no")
         toolchain.generate()
 
     def build(self):
@@ -61,22 +63,6 @@ class OpenPmixRecipe(ConanFile):
         rmdir(self, os.path.join(self.package_folder, "etc"))
         rmdir(self, os.path.join(self.package_folder, "share", "doc"))
         rmdir(self, os.path.join(self.package_folder, "share", "man"))
-        rename(
-            self,
-            os.path.join(self.package_folder, "lib", "pkgconfig"),
-            os.path.join(self.package_folder, "lib", "_orig_pkgconfig"),
-        )
 
     def package_info(self):
-        self.cpp_info.libs = ["pmix"]
-        self.cpp_info.includedirs.append(os.path.join("include", "pmix"))
-        self.cpp_info.system_libs.extend(["dl", "m"])
-
-        self.cpp_info.requires = [
-            "hwloc::hwloc",
-            "libevent::pthreads",
-            "zlib::zlib",
-            "zlib-ng::zlib-ng",
-        ]
-
-        self.cpp_info.set_property("pkg_config_name", "pmix")
+        self.cpp_info.libs = ["prrte"]
