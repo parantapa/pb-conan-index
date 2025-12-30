@@ -23,9 +23,10 @@ class OpenPmixRecipe(ConanFile):
 
     def requirements(self):
         self.requires("hwloc/[>=2.11.1 <3]")
-        self.requires("libevent/[>=2.1.12 <3]", options=dict(with_openssl=False))
+        self.requires("libevent/[>=2.1.12 <3]")
         self.requires("zlib/[>=1.3.1 <2]")
         self.requires("zlib-ng/[>=2.3.2 <3]")
+        self.requires("munge/0.5.17")
 
     def source(self):
         get(self, **self.conan_data["sources"][self.version])
@@ -39,13 +40,19 @@ class OpenPmixRecipe(ConanFile):
 
     def generate(self):
         deps = PkgConfigDeps(self)
+        deps.set_property("zlib-ng", "pkg_config_name", "zlibng")
         deps.generate()
 
         toolchain = AutotoolsToolchain(self, prefix=self.package_folder)
+        toolchain.configure_args.append("--with-hwloc=yes")
+        toolchain.configure_args.append("--with-libevent=yes")
+        toolchain.configure_args.append("--with-zlib=yes")
+        toolchain.configure_args.append("--with-zlibng=yes")
+        toolchain.configure_args.append("--with-munge=yes")
+
         toolchain.configure_args.append("--enable-python-bindings=no")
         toolchain.configure_args.append("--with-libev=no")
         toolchain.configure_args.append("--with-libltdl=no")
-        toolchain.configure_args.append("--with-munge=no")
         toolchain.generate()
 
     def build(self):
@@ -70,13 +77,14 @@ class OpenPmixRecipe(ConanFile):
     def package_info(self):
         self.cpp_info.libs = ["pmix"]
         self.cpp_info.includedirs.append(os.path.join("include", "pmix"))
-        self.cpp_info.system_libs.extend(["dl", "m"])
+        self.cpp_info.system_libs.extend(["dl", "m", "util"])
 
         self.cpp_info.requires = [
             "hwloc::hwloc",
             "libevent::pthreads",
             "zlib::zlib",
             "zlib-ng::zlib-ng",
+            "munge::munge",
         ]
 
         self.cpp_info.set_property("pkg_config_name", "pmix")

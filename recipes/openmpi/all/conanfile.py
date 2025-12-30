@@ -27,11 +27,10 @@ class OpenMPIRecipe(ConanFile):
     default_options = {"shared": False, "fPIC": True, "verbs": False, "ucx": False}
 
     def requirements(self):
-        self.requires("hwloc/[>=2.11.1 <3]")
-        self.requires("libevent/[>=2.1.12 <3]", options=dict(with_openssl=False))
-        self.requires("zlib/[>=1.3.1 <2]")
-        self.requires("zlib-ng/[>=2.3.2 <3]")
         self.requires("libnl/3.8.0")
+        self.requires("munge/0.5.17")
+        self.requires("hwloc/[>=2.11.1 <3]")
+        self.requires("libevent/[>=2.1.12 <3]")
         self.requires("openpmix/5.0.9")
         self.requires("prrte/3.0.12")
 
@@ -56,14 +55,29 @@ class OpenMPIRecipe(ConanFile):
         deps.generate()
 
         toolchain = AutotoolsToolchain(self, prefix=self.package_folder)
+        toolchain.configure_args.append("--with-libnl=yes")
+        toolchain.configure_args.append("--with-munge=yes")
+
+        toolchain.configure_args.append("--with-hwloc=external")
+        toolchain.configure_args.append("--with-libevent=external")
+        toolchain.configure_args.append("--with-pmix=external")
+        toolchain.configure_args.append(
+            f"--with-prrte={self.dependencies['prrte'].package_folder}"
+        )
+
+        if self.options.get_safe("ucx"):
+            toolchain.configure_args.append("--with-ucx=yes")
+        else:
+            toolchain.configure_args.append("--with-ucx=no")
+
+        toolchain.configure_args.append("--with-treematch=yes")
+
         toolchain.configure_args.append("--enable-mpi-fortran=no")
         toolchain.configure_args.append("--enable-oshmem=no")
-        toolchain.configure_args.append("--with-libevent=external")
-        toolchain.configure_args.append("--with-hwloc=external")
-        toolchain.configure_args.append("--with-pmix=external")
-        toolchain.configure_args.append("--with-prrte=external")
+
+        toolchain.configure_args.append("--with-zlib=no")
+        toolchain.configure_args.append("--with-zlibng=no")
         toolchain.configure_args.append("--with-libev=no")
-        toolchain.configure_args.append("--with-munge=no")
         toolchain.configure_args.append("--with-lsf=no")
         toolchain.configure_args.append("--with-sge=no")
         toolchain.configure_args.append("--with-slurm=no")
@@ -71,11 +85,6 @@ class OpenMPIRecipe(ConanFile):
         toolchain.configure_args.append("--with-pbs=no")
         toolchain.configure_args.append("--with-libfabric=no")
         toolchain.configure_args.append("--with-ofi=no")
-
-        if self.options.get_safe("ucx"):
-            toolchain.configure_args.append("--with-ucx=yes")
-        else:
-            toolchain.configure_args.append("--with-ucx=no")
 
         toolchain.configure_args.append("--with-cuda=no")
         toolchain.configure_args.append("--with-rocm=no")
@@ -97,7 +106,7 @@ class OpenMPIRecipe(ConanFile):
         toolchain.configure_args.append("--with-gpfs=no")
         toolchain.configure_args.append("--with-lustre=no")
         toolchain.configure_args.append("--with-psm2=no")
-        toolchain.configure_args.append("--with-treematch=yes")
+
         toolchain.generate()
 
     def build(self):
@@ -132,11 +141,10 @@ class OpenMPIRecipe(ConanFile):
         )
 
         self.cpp_info.components["ompi"].requires = [
+            "libnl::libnl",
+            "munge::munge",
             "hwloc::hwloc",
             "libevent::pthreads",
-            "zlib::zlib",
-            "zlib-ng::zlib-ng",
-            "libnl::libnl",
             "openpmix::openpmix",
             "prrte::prrte",
         ]

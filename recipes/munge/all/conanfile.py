@@ -2,19 +2,19 @@
 import os
 
 from conan import ConanFile
-from conan.tools.files import get, rm, rmdir
+from conan.tools.files import get, rm, rmdir, rename
 from conan.tools.layout import basic_layout
 from conan.tools.gnu import AutotoolsToolchain, Autotools, PkgConfigDeps
 
 
-class PrrteRecipe(ConanFile):
-    name = "prrte"
+class MungeRecipe(ConanFile):
+    name = "munge"
 
     # Optional metadata
-    license = "BSD-3-Clause"
+    license = "LGPL-3.0"
     author = "Parantapa Bhattacharya <pb@parantapa.net>"
     url = "https://github.com/parantapa/pb-conan-index"
-    description = "PMIx Reference RunTime Environment"
+    description = "MUNGE (MUNGE Uid 'N' Gid Emporium) is an authentication service for creating and validating user credentials."
 
     # Binary configuration
     settings = "os", "compiler", "build_type", "arch"
@@ -22,9 +22,9 @@ class PrrteRecipe(ConanFile):
     default_options = {"shared": False, "fPIC": True}
 
     def requirements(self):
-        self.requires("hwloc/[>=2.11.1 <3]")
-        self.requires("libevent/[>=2.1.12 <3]")
-        self.requires("openpmix/5.0.9")
+        self.requires("openssl/[>=1.1 <4]")
+        self.requires("zlib/[>=1.3.1 <2]")
+        self.requires("bzip2/[>=1.0.8 <2]")
 
     def source(self):
         get(self, **self.conan_data["sources"][self.version])
@@ -41,17 +41,7 @@ class PrrteRecipe(ConanFile):
         deps.generate()
 
         toolchain = AutotoolsToolchain(self, prefix=self.package_folder)
-        toolchain.configure_args.append("--with-libevent=yes")
-        toolchain.configure_args.append("--with-hwloc=yes")
-        toolchain.configure_args.append("--with-pmix=yes")
-
-        toolchain.configure_args.append("--with-libev=no")
-        toolchain.configure_args.append("--with-lsf=no")
-        toolchain.configure_args.append("--with-slurm=no")
-        toolchain.configure_args.append("--with-tm=no")
-        toolchain.configure_args.append("--with-libltdl=no")
-        toolchain.configure_args.append("--with-sge=no")
-        toolchain.configure_args.append("--with-pbs=no")
+        toolchain.configure_args.append("--with-crypto-lib=openssl")
         toolchain.generate()
 
     def build(self):
@@ -65,8 +55,15 @@ class PrrteRecipe(ConanFile):
 
         rm(self, "*.la", self.package_folder, recursive=True)
         rmdir(self, os.path.join(self.package_folder, "etc"))
-        rmdir(self, os.path.join(self.package_folder, "share", "doc"))
         rmdir(self, os.path.join(self.package_folder, "share", "man"))
+        rmdir(self, os.path.join(self.package_folder, "lib", "systemd"))
+        rmdir(self, os.path.join(self.package_folder, "lib", "sysusers.d"))
+        rmdir(self, os.path.join(self.package_folder, "var"))
+        rename(
+            self,
+            os.path.join(self.package_folder, "lib", "pkgconfig"),
+            os.path.join(self.package_folder, "lib", "_orig_pkgconfig"),
+        )
 
     def package_info(self):
-        self.cpp_info.libs = ["prrte"]
+        self.cpp_info.libs = ["munge"]
