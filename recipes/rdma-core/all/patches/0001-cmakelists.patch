@@ -1,0 +1,101 @@
+--- rdma-core-61.0/CMakeLists.txt	2025-12-21 02:45:02.000000000 -0500
++++ rdma-core-61.0-patched/CMakeLists.txt	2026-01-01 21:05:05.192298897 -0500
+@@ -724,32 +724,32 @@
+ 
+ # Providers
+ if (HAVE_COHERENT_DMA)
+-add_subdirectory(providers/bnxt_re)
+-add_subdirectory(providers/cxgb4) # NO SPARSE
+-add_subdirectory(providers/efa)
+-add_subdirectory(providers/efa/man)
+-add_subdirectory(providers/erdma)
+-add_subdirectory(providers/hns)
+-add_subdirectory(providers/hns/man)
+-add_subdirectory(providers/ionic)
+-add_subdirectory(providers/irdma)
+-add_subdirectory(providers/mana)
+-add_subdirectory(providers/mana/man)
+-add_subdirectory(providers/mlx4)
+-add_subdirectory(providers/mlx4/man)
++# add_subdirectory(providers/bnxt_re)
++# add_subdirectory(providers/cxgb4) # NO SPARSE
++# add_subdirectory(providers/efa)
++# add_subdirectory(providers/efa/man)
++# add_subdirectory(providers/erdma)
++# add_subdirectory(providers/hns)
++# add_subdirectory(providers/hns/man)
++# add_subdirectory(providers/ionic)
++# add_subdirectory(providers/irdma)
++# add_subdirectory(providers/mana)
++# add_subdirectory(providers/mana/man)
++# add_subdirectory(providers/mlx4)
++# add_subdirectory(providers/mlx4/man)
+ add_subdirectory(providers/mlx5)
+ add_subdirectory(providers/mlx5/man)
+-add_subdirectory(providers/mthca)
+-add_subdirectory(providers/ocrdma)
+-add_subdirectory(providers/qedr)
+-add_subdirectory(providers/vmw_pvrdma)
++# add_subdirectory(providers/mthca)
++# add_subdirectory(providers/ocrdma)
++# add_subdirectory(providers/qedr)
++# add_subdirectory(providers/vmw_pvrdma)
+ endif()
+ 
+-add_subdirectory(providers/hfi1verbs)
+-add_subdirectory(providers/ipathverbs)
+-add_subdirectory(providers/rxe)
+-add_subdirectory(providers/rxe/man)
+-add_subdirectory(providers/siw)
++# add_subdirectory(providers/hfi1verbs)
++# add_subdirectory(providers/ipathverbs)
++# add_subdirectory(providers/rxe)
++# add_subdirectory(providers/rxe/man)
++# add_subdirectory(providers/siw)
+ 
+ add_subdirectory(libibmad)
+ add_subdirectory(libibnetdisc)
+@@ -758,26 +758,26 @@
+ add_subdirectory(infiniband-diags/scripts)
+ add_subdirectory(infiniband-diags/man)
+ 
+-if (CYTHON_EXECUTABLE)
+-  add_subdirectory(pyverbs)
+-  add_subdirectory(tests)
+-endif()
+-
+-# Binaries
+-if (NOT NL_KIND EQUAL 0)
+-  add_subdirectory(ibacm) # NO SPARSE
+-endif()
+-
+-if (NOT NL_KIND EQUAL 0)
+-  add_subdirectory(iwpmd)
+-endif()
++# if (CYTHON_EXECUTABLE)
++#   add_subdirectory(pyverbs)
++#   add_subdirectory(tests)
++# endif()
++
++# # Binaries
++# if (NOT NL_KIND EQUAL 0)
++#   add_subdirectory(ibacm) # NO SPARSE
++# endif()
++#
++# if (NOT NL_KIND EQUAL 0)
++#   add_subdirectory(iwpmd)
++# endif()
+ add_subdirectory(libibumad/tests)
+ add_subdirectory(libibverbs/examples)
+ add_subdirectory(librdmacm/examples)
+-if (UDEV_FOUND)
+-  add_subdirectory(rdma-ndd)
+-endif()
+-add_subdirectory(srp_daemon)
++# if (UDEV_FOUND)
++#   add_subdirectory(rdma-ndd)
++# endif()
++# add_subdirectory(srp_daemon)
+ 
+ ibverbs_finalize()
+ rdma_finalize_libs()

@@ -1,0 +1,9 @@
+sources:
+  "pci.61.0":
+    url: "https://github.com/linux-rdma/rdma-core/releases/download/v61.0/rdma-core-61.0.tar.gz"
+    sha256: "340be509137103677ea30798d6ffe64a991148dae333b79a5bc0744e219fde2f"
+    strip_root: True
+patches:
+  "pci.61.0":
+    - patch_file: "patches/0001-cmakelists.patch"
+
