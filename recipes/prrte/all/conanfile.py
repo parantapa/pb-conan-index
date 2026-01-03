@@ -24,7 +24,7 @@ class PrrteRecipe(ConanFile):
     def requirements(self):
         self.requires("hwloc/[>=2.11.1 <3]")
         self.requires("libevent/[>=2.1.12 <3]")
-        self.requires("openpmix/5.0.9")
+        self.requires("openpmix/pci.5.0.9")
 
     def source(self):
         get(self, **self.conan_data["sources"][self.version])
@@ -70,3 +70,12 @@ class PrrteRecipe(ConanFile):
 
     def package_info(self):
         self.cpp_info.libs = ["prrte"]
+
+        self.cpp_info.requires = [
+            "hwloc::hwloc",
+            "libevent::pthreads",
+            "openpmix::openpmix",
+        ]
+
+        bin_folder = os.path.join(self.package_folder, "bin")
+        self.runenv_info.prepend_path("PATH", bin_folder)

@@ -88,3 +88,6 @@ class OpenPmixRecipe(ConanFile):
         ]
 
         self.cpp_info.set_property("pkg_config_name", "pmix")
+
+        bin_folder = os.path.join(self.package_folder, "bin")
+        self.runenv_info.prepend_path("PATH", bin_folder)
