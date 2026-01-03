@@ -163,7 +163,9 @@ class OpenMPIRecipe(ConanFile):
         self.cpp_info.components["ompi"].set_property("cmake_target_name", "MPI::MPI_C")
         self.cpp_info.components["ompi"].libs = ["mpi", "open-pal"]
         if self.settings.os in ["Linux", "FreeBSD"]:
-            self.cpp_info.components["ompi"].system_libs = ["dl", "rt"]
+            self.cpp_info.components["ompi"].system_libs.extend(["dl", "rt"])
+        if self.cuda_home is not None:
+            self.cpp_info.components["ompi"].system_libs.append("cuda")
         self.cpp_info.components["ompi"].includedirs.append(
             os.path.join("include", "openmpi")
         )
