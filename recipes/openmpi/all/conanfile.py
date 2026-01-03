@@ -21,24 +21,23 @@ class OpenMPIRecipe(ConanFile):
     options = {
         "shared": [True, False],
         "fPIC": [True, False],
-        "verbs": [True, False],
-        "ucx": [True, False],
+        "rdma": [True, False],
     }
-    default_options = {"shared": False, "fPIC": True, "verbs": False, "ucx": False}
+    default_options = {"shared": False, "fPIC": True, "rdma": False}
+
+    package_id_unknown_mode = "patch_mode"
 
     def requirements(self):
-        self.requires("libnl/3.8.0")
+        self.requires("libnl/3.9.0")
         self.requires("munge/0.5.17")
+
         self.requires("hwloc/[>=2.11.1 <3]")
         self.requires("libevent/[>=2.1.12 <3]")
-        self.requires("openpmix/5.0.9")
-        self.requires("prrte/3.0.12")
-
-        if self.options.get_safe("ucx"):
-            self.requires(
-                "openucx/[>=1.20.0 <2]",
-                options=dict(verbs=self.options.get_safe("verbs")),
-            )
+        self.requires("openpmix/pci.5.0.9")
+        self.requires("prrte/pci.3.0.12")
+        self.requires(
+            "openucx/pci.1.20.0", options=dict(rdma=self.options.get_safe("rdma"))
+        )
 
     def source(self):
         get(self, **self.conan_data["sources"][self.version])
@@ -55,57 +54,67 @@ class OpenMPIRecipe(ConanFile):
         deps.generate()
 
         toolchain = AutotoolsToolchain(self, prefix=self.package_folder)
-        toolchain.configure_args.append("--with-libnl=yes")
-        toolchain.configure_args.append("--with-munge=yes")
 
+        # Networking support / options
+        toolchain.configure_args.append("--with-hcoll=no")
+        toolchain.configure_args.append("--with-knem=no")
+        toolchain.configure_args.append("--with-ofi=no")
+        toolchain.configure_args.append("--with-portals4=no")
+        toolchain.configure_args.append("--with-psm2=no")
+        toolchain.configure_args.append("--with-usnic=no")
+        toolchain.configure_args.append("--with-ugni=no")
+        toolchain.configure_args.append("--with-udreg=no")
+        toolchain.configure_args.append("--with-cray-xpmem=no")
+        toolchain.configure_args.append("--with-xpmem=no")
+        toolchain.configure_args.append("--with-cma=no")
+        toolchain.configure_args.append("--with-ime=no")
+        toolchain.configure_args.append("--with-ucx=yes")
+
+        toolchain.configure_args.append("--with-ucc=no")
+
+        # Run-time system support
+        toolchain.configure_args.append("--with-lsf=no")
+        toolchain.configure_args.append("--with-slurm=no")
+        toolchain.configure_args.append("--with-sge=no")
+        toolchain.configure_args.append("--with-tm=no")
+        toolchain.configure_args.append("--with-pbs=no")
+
+        # Options for required support libraries
         toolchain.configure_args.append("--with-hwloc=external")
         toolchain.configure_args.append("--with-libevent=external")
         toolchain.configure_args.append("--with-pmix=external")
         toolchain.configure_args.append(
             f"--with-prrte={self.dependencies['prrte'].package_folder}"
         )
+        toolchain.configure_args.append("--with-valgrind=no")
 
-        if self.options.get_safe("ucx"):
-            toolchain.configure_args.append("--with-ucx=yes")
-        else:
-            toolchain.configure_args.append("--with-ucx=no")
-
-        toolchain.configure_args.append("--with-treematch=yes")
-
+        # MPI functionality
+        toolchain.configure_args.append("--disable-ft")
+        toolchain.configure_args.append("--enable-mpi-java=no")
         toolchain.configure_args.append("--enable-mpi-fortran=no")
+
+        # MPI-IO
+        toolchain.configure_args.append("--with-gpfs=no")
+        toolchain.configure_args.append("--with-lustre=no")
+
+        # OpenSHMEM functionality
         toolchain.configure_args.append("--enable-oshmem=no")
+        toolchain.configure_args.append("--enable-oshmem-fortran=no")
+
+        toolchain.configure_args.append("--with-cuda=no")
+        toolchain.configure_args.append("--with-rocm=no")
+        toolchain.configure_args.append("--with-memkind=no")
+
+        toolchain.configure_args.append("--with-libnl=yes")
+        toolchain.configure_args.append("--with-munge=yes")
+        toolchain.configure_args.append("--with-treematch=yes")
 
         toolchain.configure_args.append("--with-zlib=no")
         toolchain.configure_args.append("--with-zlibng=no")
         toolchain.configure_args.append("--with-libev=no")
-        toolchain.configure_args.append("--with-lsf=no")
-        toolchain.configure_args.append("--with-sge=no")
-        toolchain.configure_args.append("--with-slurm=no")
-        toolchain.configure_args.append("--with-tm=no")
-        toolchain.configure_args.append("--with-pbs=no")
-        toolchain.configure_args.append("--with-libfabric=no")
-        toolchain.configure_args.append("--with-ofi=no")
-
-        toolchain.configure_args.append("--with-cuda=no")
-        toolchain.configure_args.append("--with-rocm=no")
-        toolchain.configure_args.append("--with-portals4=no")
-        toolchain.configure_args.append("--with-ugni=no")
-        toolchain.configure_args.append("--with-libtdl=no")
-        toolchain.configure_args.append("--with-valgrind=no")
-        toolchain.configure_args.append("--with-memkind=no")
-        toolchain.configure_args.append("--with-udreg=no")
-        toolchain.configure_args.append("--with-cma=no")
-        toolchain.configure_args.append("--with-knem=no")
-        toolchain.configure_args.append("--with-cray-xpmem=no")
+        toolchain.configure_args.append("--with-libltdl=no")
         toolchain.configure_args.append("--with-argobots=no")
         toolchain.configure_args.append("--with-qthreads=no")
-        toolchain.configure_args.append("--with-hcoll=no")
-        toolchain.configure_args.append("--with-ucc=no")
-        toolchain.configure_args.append("--with-ime=no")
-        toolchain.configure_args.append("--with-pvfs2=no")
-        toolchain.configure_args.append("--with-gpfs=no")
-        toolchain.configure_args.append("--with-lustre=no")
-        toolchain.configure_args.append("--with-psm2=no")
 
         toolchain.generate()
 
@@ -147,10 +156,8 @@ class OpenMPIRecipe(ConanFile):
             "libevent::pthreads",
             "openpmix::openpmix",
             "prrte::prrte",
+            "openucx::openucx"
         ]
-
-        if self.options.get_safe("ucx"):
-            self.cpp_info.components["ompi"].requires.append("openucx::openucx")
 
         bin_folder = os.path.join(self.package_folder, "bin")
         # Prepend to PATH to avoid a conflict with system MPI
