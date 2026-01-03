@@ -22,8 +22,9 @@ class OpenMPIRecipe(ConanFile):
         "shared": [True, False],
         "fPIC": [True, False],
         "rdma": [True, False],
+        "cuda": [True, False],
     }
-    default_options = {"shared": False, "fPIC": True, "rdma": False}
+    default_options = {"shared": False, "fPIC": True, "rdma": False, "cuda": False}
 
     package_id_unknown_mode = "patch_mode"
 
@@ -36,8 +37,21 @@ class OpenMPIRecipe(ConanFile):
         self.requires("openpmix/pci.5.0.9")
         self.requires("prrte/pci.3.0.12")
         self.requires(
-            "openucx/pci.1.20.0", options=dict(rdma=self.options.get_safe("rdma"))
+            "openucx/pci.1.20.0",
+            options=dict(
+                rdma=self.options.get_safe("rdma"), cuda=self.options.get_safe("cuda")
+            ),
         )
+
+        self.cuda_home = None
+        if self.options.get_safe("cuda"):
+            for var in ["CUDA_HOME", "CUDA_PATH", "CUDA_ROOT"]:
+                if var in os.environ:
+                    self.cuda_home = os.environ[var]
+            if self.cuda_home is None:
+                raise RuntimeError(
+                    "Unable to find CUDA installation; set one of CUDA_HOME/CUDA_PATH/CUDA_ROOT"
+                )
 
     def source(self):
         get(self, **self.conan_data["sources"][self.version])
@@ -89,11 +103,12 @@ class OpenMPIRecipe(ConanFile):
         toolchain.configure_args.append("--with-valgrind=no")
 
         # MPI functionality
-        toolchain.configure_args.append("--disable-ft")
         toolchain.configure_args.append("--enable-mpi-java=no")
         toolchain.configure_args.append("--enable-mpi-fortran=no")
 
         # MPI-IO
+        toolchain.configure_args.append("--disable-io-ompio")
+        toolchain.configure_args.append("--disable-io-romio")
         toolchain.configure_args.append("--with-gpfs=no")
         toolchain.configure_args.append("--with-lustre=no")
 
@@ -101,14 +116,18 @@ class OpenMPIRecipe(ConanFile):
         toolchain.configure_args.append("--enable-oshmem=no")
         toolchain.configure_args.append("--enable-oshmem-fortran=no")
 
-        toolchain.configure_args.append("--with-cuda=no")
+        if self.cuda_home is not None:
+            toolchain.configure_args.append(f"--with-cuda={self.cuda_home}")
+        else:
+            toolchain.configure_args.append(f"--with-cuda=no")
+
         toolchain.configure_args.append("--with-rocm=no")
         toolchain.configure_args.append("--with-memkind=no")
 
         toolchain.configure_args.append("--with-libnl=yes")
         toolchain.configure_args.append("--with-munge=yes")
-        toolchain.configure_args.append("--with-treematch=yes")
 
+        toolchain.configure_args.append("--with-treematch=no")
         toolchain.configure_args.append("--with-zlib=no")
         toolchain.configure_args.append("--with-zlibng=no")
         toolchain.configure_args.append("--with-libev=no")
@@ -156,7 +175,7 @@ class OpenMPIRecipe(ConanFile):
             "libevent::pthreads",
             "openpmix::openpmix",
             "prrte::prrte",
-            "openucx::openucx"
+            "openucx::openucx",
         ]
 
         bin_folder = os.path.join(self.package_folder, "bin")

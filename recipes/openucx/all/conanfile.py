@@ -22,14 +22,25 @@ class OpenUCXRecipe(ConanFile):
         "shared": [True],  # UCX doesn't support static
         "fPIC": [True, False],
         "rdma": [True, False],
+        "cuda": [True, False],
     }
-    default_options = {"shared": True, "fPIC": True, "rdma": False}
+    default_options = {"shared": True, "fPIC": True, "rdma": False, "cuda": False}
 
     package_id_unknown_mode = "patch_mode"
 
     def requirements(self):
         if self.options.get_safe("rdma"):
             self.requires("rdma-core/pci.61.0")
+
+        self.cuda_home = None
+        if self.options.get_safe("cuda"):
+            for var in ["CUDA_HOME", "CUDA_PATH", "CUDA_ROOT"]:
+                if var in os.environ:
+                    self.cuda_home = os.environ[var]
+            if self.cuda_home is None:
+                raise RuntimeError(
+                    "Unable to find CUDA installation; set one of CUDA_HOME/CUDA_PATH/CUDA_ROOT"
+                )
 
     def source(self):
         get(self, **self.conan_data["sources"][self.version])
@@ -48,7 +59,11 @@ class OpenUCXRecipe(ConanFile):
 
         toolchain.configure_args.append("--with-valgrind=no")
 
-        toolchain.configure_args.append("--with-cuda=no")
+        if self.cuda_home is not None:
+            toolchain.configure_args.append(f"--with-cuda={self.cuda_home}")
+        else:
+            toolchain.configure_args.append(f"--with-cuda=no")
+
         toolchain.configure_args.append("--with-gdrcopy=no")
         toolchain.configure_args.append("--with-doca-gpunetio=no")
 
