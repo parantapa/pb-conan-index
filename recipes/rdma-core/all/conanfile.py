@@ -23,8 +23,6 @@ class RdmaCoreRecipe(ConanFile):
 
     exports_sources = "patches/*"
 
-    package_id_unknown_mode = "patch_mode"
-
     def source(self):
         get(self, **self.conan_data["sources"][self.version])
 

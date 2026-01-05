@@ -22,9 +22,9 @@ class MungeRecipe(ConanFile):
     default_options = {"shared": False, "fPIC": True}
 
     def requirements(self):
-        self.requires("openssl/[>=1.1 <4]")
-        self.requires("zlib/[>=1.3.1 <2]")
-        self.requires("bzip2/[>=1.0.8 <2]")
+        self.requires("openssl/3.6.0")
+        self.requires("zlib/1.3.1")
+        self.requires("bzip2/1.0.8")
 
     def source(self):
         get(self, **self.conan_data["sources"][self.version])

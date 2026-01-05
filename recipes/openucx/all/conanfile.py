@@ -26,11 +26,9 @@ class OpenUCXRecipe(ConanFile):
     }
     default_options = {"shared": True, "fPIC": True, "rdma": False, "cuda": False}
 
-    package_id_unknown_mode = "patch_mode"
-
     def requirements(self):
         if self.options.get_safe("rdma"):
-            self.requires("rdma-core/pci.61.0")
+            self.requires("rdma-core/61.0.pci")
 
         self.cuda_home = None
         if self.options.get_safe("cuda"):
@@ -61,6 +59,10 @@ class OpenUCXRecipe(ConanFile):
 
         if self.cuda_home is not None:
             toolchain.configure_args.append(f"--with-cuda={self.cuda_home}")
+            if "NVCC_GENCODE" in os.environ:
+                toolchain.configure_args.append(
+                    f"--with-nvcc-gencode={os.environ['NVCC_GENCODE']}"
+                )
         else:
             toolchain.configure_args.append(f"--with-cuda=no")
 
@@ -132,6 +134,7 @@ class OpenUCXRecipe(ConanFile):
 
     def package_info(self):
         self.cpp_info.libs = ["ucp", "uct", "ucs", "ucm"]
+        self.cpp_info.set_property("pkg_config_name", "ucx")
 
         if self.options.get_safe("rdma"):
             self.cpp_info.requires = [

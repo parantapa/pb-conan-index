@@ -1,5 +1,5 @@
 sources:
-  "0.5.17":
+  "0.5.17.pci":
     url: "https://github.com/dun/munge/releases/download/munge-0.5.17/munge-0.5.17.tar.xz"
     sha256: "bcd7b124ed0c566601dec8bad5fe14d50c843b95321e4184ccad292208554a16"
     strip_root: true

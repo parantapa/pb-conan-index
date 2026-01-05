@@ -22,11 +22,11 @@ class OpenPmixRecipe(ConanFile):
     default_options = {"shared": False, "fPIC": True}
 
     def requirements(self):
-        self.requires("hwloc/[>=2.11.1 <3]")
-        self.requires("libevent/[>=2.1.12 <3]")
-        self.requires("zlib/[>=1.3.1 <2]")
-        self.requires("zlib-ng/[>=2.3.2 <3]")
-        self.requires("munge/0.5.17")
+        self.requires("hwloc/2.11.1")
+        self.requires("libevent/2.1.12")
+        self.requires("zlib/1.3.1")
+        self.requires("zlib-ng/2.3.2")
+        self.requires("munge/0.5.17.pci")
 
     def source(self):
         get(self, **self.conan_data["sources"][self.version])

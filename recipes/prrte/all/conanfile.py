@@ -22,9 +22,9 @@ class PrrteRecipe(ConanFile):
     default_options = {"shared": False, "fPIC": True}
 
     def requirements(self):
-        self.requires("hwloc/[>=2.11.1 <3]")
-        self.requires("libevent/[>=2.1.12 <3]")
-        self.requires("openpmix/pci.5.0.9")
+        self.requires("hwloc/2.11.1")
+        self.requires("libevent/2.1.12")
+        self.requires("openpmix/5.0.9.pci")
 
     def source(self):
         get(self, **self.conan_data["sources"][self.version])

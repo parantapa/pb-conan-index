@@ -26,18 +26,22 @@ class OpenMPIRecipe(ConanFile):
     }
     default_options = {"shared": False, "fPIC": True, "rdma": False, "cuda": False}
 
-    package_id_unknown_mode = "patch_mode"
-
     def requirements(self):
         self.requires("libnl/3.9.0")
-        self.requires("munge/0.5.17")
+        self.requires("munge/0.5.17.pci")
 
-        self.requires("hwloc/[>=2.11.1 <3]")
-        self.requires("libevent/[>=2.1.12 <3]")
-        self.requires("openpmix/pci.5.0.9")
-        self.requires("prrte/pci.3.0.12")
+        self.requires("hwloc/2.11.1")
+        self.requires("libevent/2.1.12")
+        self.requires("openpmix/5.0.9.pci")
+        self.requires("prrte/3.0.12.pci")
         self.requires(
-            "openucx/pci.1.20.0",
+            "openucx/1.20.0.pci",
+            options=dict(
+                rdma=self.options.get_safe("rdma"), cuda=self.options.get_safe("cuda")
+            ),
+        )
+        self.requires(
+            "openucc/1.6.0.pci",
             options=dict(
                 rdma=self.options.get_safe("rdma"), cuda=self.options.get_safe("cuda")
             ),
@@ -82,9 +86,9 @@ class OpenMPIRecipe(ConanFile):
         toolchain.configure_args.append("--with-xpmem=no")
         toolchain.configure_args.append("--with-cma=no")
         toolchain.configure_args.append("--with-ime=no")
-        toolchain.configure_args.append("--with-ucx=yes")
 
-        toolchain.configure_args.append("--with-ucc=no")
+        toolchain.configure_args.append("--with-ucx=yes")
+        toolchain.configure_args.append("--with-ucc=yes")
 
         # Run-time system support
         toolchain.configure_args.append("--with-lsf=no")
@@ -178,6 +182,7 @@ class OpenMPIRecipe(ConanFile):
             "openpmix::openpmix",
             "prrte::prrte",
             "openucx::openucx",
+            "openucc::openucc",
         ]
 
         bin_folder = os.path.join(self.package_folder, "bin")

@@ -1,5 +1,5 @@
 sources:
-  "pci.5.0.9":
+  "5.0.9.pci":
     url: "https://download.open-mpi.org/release/open-mpi/v5.0/openmpi-5.0.9.tar.gz"
     sha256: "be35ac3aae68609dedf56a3c6480cb1b0af9ae40b98cc83ef27bc859084a9aa8"
     strip_root: true
