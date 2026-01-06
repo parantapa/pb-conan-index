@@ -26,6 +26,9 @@ class OpenUccRecipe(ConanFile):
     }
     default_options = {"shared": True, "fPIC": True, "rdma": False, "cuda": False}
 
+    def build_requirements(self):
+        self.tool_requires("autoconf/2.72")
+
     def requirements(self):
         self.requires(
             "openucx/1.20.0.pci",
@@ -63,7 +66,7 @@ class OpenUccRecipe(ConanFile):
         toolchain.configure_args.append("--with-valgrind=no")
         toolchain.configure_args.append("--with-mpi=no")
 
-        toolchain.configure_args.append("--with-ucx=yes")
+        toolchain.configure_args.append(f"--with-ucx={self.dependencies['openucx'].package_folder}")
 
         if self.cuda_home is not None:
             toolchain.configure_args.append(f"--with-cuda={self.cuda_home}")

@@ -9,18 +9,23 @@ run_remove () {
 
     # conan remove "hpc-utils" --confirm
 
-    # conan remove "munge" --confirm
+    conan remove "munge" --confirm
 
-    # conan remove "openpmix" --confirm
-    # conan remove "prrte" --confirm
+    conan remove "openpmix" --confirm
+    conan remove "prrte" --confirm
 
-    # conan remove "openucx" --confirm
+    conan remove "openucx" --confirm
     conan remove "openucc" --confirm
     conan remove "openmpi" --confirm
 }
 
 run_install () {
-    conan create -vverbose recipes/openmpi/all/ --version="5.0.9.pci" --options="openmpi/*:cuda=True" --build=missing
+    conan create recipes/openmpi/all/ \
+        -vverbose \
+        --version="5.0.9.pci" \
+        --options="openmpi/*:cuda=True" \
+        --options="openmpi/*:rdma=True" \
+        --build=missing
 }
 
 show_help() {
