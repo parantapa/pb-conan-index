@@ -1,3 +1,5 @@
 versions:
   "9.14":
     folder: "all"
+  "9.15":
+    folder: "all"

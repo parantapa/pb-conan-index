@@ -6,7 +6,6 @@ from conan.tools.scm import Git
 
 class ORTools(ConanFile):
     name = "ortools"
-    version = "9.14"
 
     settings = "os", "compiler", "build_type", "arch"
 
