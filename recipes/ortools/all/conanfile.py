@@ -3,25 +3,27 @@ import os
 
 from conan import ConanFile
 from conan.tools.cmake import CMakeToolchain, CMakeDeps, CMake, cmake_layout
+from conan.tools.env import VirtualBuildEnv
 from conan.tools.scm import Git
 from conan.tools.files import rename
 
 
-class ORTools(ConanFile):
+class ORToolsRecipe(ConanFile):
     name = "ortools"
 
+    # Optional metadata
+    license = "Apache 2.0"
+    author = "Parantapa Bhattacharya <pb@parantapa.net>"
+    url = "https://github.com/parantapa/pb-conan-index"
+    description = "Google's software suite for combinatorial optimization."
+
+    # Binary configuration
     settings = "os", "compiler", "build_type", "arch"
-
-    def source(self):
-        git = Git(self)
-        git.clone(
-            url="https://github.com/google/or-tools",
-            target="or-tools",
-            args=["--branch", f"v{self.version}", "--depth", "1"],
-        )
-
-    def layout(self):
-        cmake_layout(self)
+    options = {
+        "shared": [True, False],
+        "fPIC": [True, False],
+    }
+    default_options = {"shared": False, "fPIC": True}
 
     def requirements(self):
         self.requires("zlib/1.3.1")
@@ -31,11 +33,35 @@ class ORTools(ConanFile):
         self.requires("eigen/5.0.1")
         self.requires("re2/20251105")
 
+    def source(self):
+        git = Git(self)
+        git.clone(
+            url="https://github.com/google/or-tools",
+            target="or-tools",
+            args=["--branch", f"v{self.version}", "--depth", "1"],
+        )
+
+    def config_options(self):
+        if self.settings.os == "Windows":
+            del self.options.fPIC
+
+    def layout(self):
+        cmake_layout(self)
+
     def generate(self):
         deps = CMakeDeps(self)
         deps.generate()
 
+        protobuf_bin_dir = os.path.join(
+            self.dependencies["protobuf"].package_folder, "bin"
+        )
+
+        buildenv = VirtualBuildEnv(self)
+        buildenv.environment().prepend_path("PATH", protobuf_bin_dir)
+        buildenv.generate()
+
         tc = CMakeToolchain(self)
+        tc.presets_build_environment = buildenv.environment()
         tc.generate()
 
     def build(self):
@@ -71,45 +97,15 @@ class ORTools(ConanFile):
         self.cpp_info.libs = ["ortools"]
         self.cpp_info.system_requires = ["m", "dl", "pthreads"]
         self.cpp_info.requires = [
-            "ZLIB::ZLIB",
-            "BZip2::BZip2",
-            "absl::base",
-            "absl::core_headers",
-            "absl::absl_check",
-            "absl::absl_log",
-            "absl::check",
-            "absl::die_if_null",
-            "absl::flags",
-            "absl::flags_commandlineflag",
-            "absl::flags_marshalling",
-            "absl::flags_parse",
-            "absl::flags_reflection",
-            "absl::flags_usage",
-            "absl::log",
-            "absl::log_flags",
-            "absl::log_globals",
-            "absl::log_initialize",
-            "absl::log_internal_message",
-            "absl::cord",
-            "absl::random_random",
-            "absl::raw_hash_set",
-            "absl::hash",
-            "absl::leak_check",
-            "absl::memory",
-            "absl::meta",
-            "absl::stacktrace",
-            "absl::status",
-            "absl::statusor",
-            "absl::str_format",
-            "absl::strings",
-            "absl::synchronization",
-            "absl::time",
-            "absl::any",
+            "zlib::zlib",
+            "bzip2::bzip2",
+            "abseil::abseil",
             "protobuf::libprotobuf",
             "re2::re2",
-            "Eigen3::Eigen",
+            "eigen::eigen3",
         ]
 
         flatzinc = self.cpp_info.components["flatzinc"]
-        flatzinc.libs = ["ortools_flatzinc"]
-        flatzinc.requires = ["ortools"]
+        flatzinc.libs = ["ortools_flatzinc", "ortools"]
+        flatzinc.system_requires = self.cpp_info.system_requires
+        flatzinc.requires = self.cpp_info.requires
