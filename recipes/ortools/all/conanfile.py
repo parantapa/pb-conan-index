@@ -35,10 +35,11 @@ class ORToolsRecipe(ConanFile):
 
     def source(self):
         git = Git(self)
+        tag = "v" + self.version.removesuffix(".pci")
         git.clone(
             url="https://github.com/google/or-tools",
             target="or-tools",
-            args=["--branch", f"v{self.version}", "--depth", "1"],
+            args=["--branch", tag, "--depth", "1"],
         )
 
     def config_options(self):
@@ -62,24 +63,21 @@ class ORToolsRecipe(ConanFile):
 
         tc = CMakeToolchain(self)
         tc.presets_build_environment = buildenv.environment()
+        tc.variables["BUILD_DEPS"] = False
+        tc.variables["USE_COINOR"] = False
+        tc.variables["USE_GLPK"] = False
+        tc.variables["USE_HIGHS"] = False
+        tc.variables["USE_SCIP"] = False
+        tc.variables["USE_CPLEX"] = False
+        tc.variables["BUILD_SAMPLES"] = False
+        tc.variables["BUILD_EXAMPLES"] = False
+        tc.variables["BUILD_TESTING"] = False
         tc.generate()
 
     def build(self):
         cmake = CMake(self)
         cmake.configure(
-            {
-                "BUILD_DEPS": "OFF",
-                "USE_COINOR": "OFF",
-                "USE_GLPK": "OFF",
-                "USE_HIGHS": "OFF",
-                "USE_PDLP": "ON",
-                "USE_SCIP": "OFF",
-                "USE_CPLEX": "OFF",
-                "BUILD_SAMPLES": "OFF",
-                "BUILD_EXAMPLES": "OFF",
-                "BUILD_TESTING": "OFF",
-            },
-            build_script_folder=os.path.join(self.source_folder, "or-tools"),
+            build_script_folder=os.path.join(self.source_folder, "or-tools")
         )
         cmake.build()
 

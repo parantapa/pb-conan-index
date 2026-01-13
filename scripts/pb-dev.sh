@@ -22,7 +22,7 @@ run_install () {
     
     # conan create -vverbose recipes/hpc-utils/all/ --version="main" --build=missing
     
-    conan create -vverbose recipes/ortools/all/ --version="9.15" --build=missing
+    conan create -vverbose recipes/ortools/all/ --version="9.15.pci" --build=missing
 }
 
 show_help() {
