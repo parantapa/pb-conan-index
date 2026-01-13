@@ -7,8 +7,6 @@ run_remove () {
     # conan remove "gurobi" --confirm
     conan remove "ortools" --confirm
 
-    # conan remove "hpc-utils" --confirm
-
     # conan remove "munge" --confirm
     # conan remove "openpmix" --confirm
     # conan remove "prrte" --confirm
@@ -19,8 +17,6 @@ run_remove () {
 
 run_install () {
     # conan create -vverbose recipes/openmpi/all/ --version="5.0.9.pci" --options="openmpi/*:cuda=True" --build=missing
-    
-    # conan create -vverbose recipes/hpc-utils/all/ --version="main" --build=missing
     
     conan create -vverbose recipes/ortools/all/ --version="9.15.pci" --build=missing
 }
