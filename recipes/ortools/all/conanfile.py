@@ -3,13 +3,13 @@ import os
 
 from conan import ConanFile
 from conan.tools.cmake import CMakeToolchain, CMakeDeps, CMake, cmake_layout
-from conan.tools.env import VirtualBuildEnv
 from conan.tools.scm import Git
+from conan.tools.files import rename
+
 
 class ORToolsRecipe(ConanFile):
     name = "ortools"
 
-    # Binary configuration
     settings = "os", "compiler", "build_type", "arch"
     options = {
         "shared": [True, False],
@@ -18,12 +18,15 @@ class ORToolsRecipe(ConanFile):
     default_options = {"shared": False, "fPIC": True}
 
     def requirements(self):
-        self.requires("zlib/1.3.1")
+        self.requires("zlib/1.3.1", transitive_headers=True)
         self.requires("bzip2/1.0.8")
         self.requires("abseil/20250814.0", transitive_headers=True)
         self.requires("protobuf/6.32.1", transitive_headers=True)
-        self.requires("eigen/5.0.1")
+        self.requires("eigen/5.0.1", transitive_headers=True)
         self.requires("re2/20251105")
+
+    def build_requirements(self):
+        self.tool_requires("protobuf/6.32.1")
 
     def source(self):
         git = Git(self)
@@ -45,16 +48,7 @@ class ORToolsRecipe(ConanFile):
         deps = CMakeDeps(self)
         deps.generate()
 
-        protobuf_bin_dir = os.path.join(
-            self.dependencies["protobuf"].package_folder, "bin"
-        )
-
-        buildenv = VirtualBuildEnv(self)
-        buildenv.environment().prepend_path("PATH", protobuf_bin_dir)
-        buildenv.generate()
-
         tc = CMakeToolchain(self)
-        tc.presets_build_environment = buildenv.environment()
         tc.variables["BUILD_DEPS"] = False
         tc.variables["USE_COINOR"] = False
         tc.variables["USE_GLPK"] = False
@@ -77,6 +71,20 @@ class ORToolsRecipe(ConanFile):
         cmake = CMake(self)
         cmake.install()
 
+        rename(
+            self,
+            os.path.join(self.package_folder, "lib", "cmake"),
+            os.path.join(self.package_folder, "lib", "_orig_cmake"),
+        )
+
     def package_info(self):
-        self.cpp_info.set_property("cmake_find_mode", "none")
-        self.cpp_info.builddirs = ["lib/cmake/ortools"]
+        self.cpp_info.libs = ["ortools"]
+        self.cpp_info.system_libs = ["m", "dl", "pthread"]
+        self.cpp_info.defines = [
+            "OR_PROTO_DLL=",
+            "USE_MATH_OPT",
+            "USE_BOP",
+            "USE_GLOP",
+            "USE_PDLP",
+        ]
+        self.cpp_info.cflags = ["-fwrapv"]
