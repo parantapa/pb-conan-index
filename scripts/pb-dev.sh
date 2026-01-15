@@ -2,9 +2,10 @@
 
 . "$HOME/default-env.sh"
 
-run_remove () {
+run_clean () {
     # conan remove "random123" --confirm
     # conan remove "gurobi" --confirm
+
     conan remove "ortools" --confirm
 
     # conan remove "munge" --confirm
@@ -17,7 +18,7 @@ run_remove () {
 
 run_install () {
     # conan create -vverbose recipes/openmpi/all/ --version="5.0.9.pci" --options="openmpi/*:cuda=True" --build=missing
-    
+
     conan create -vverbose recipes/ortools/all/ --version="9.15.pci" --build=missing
 }
 

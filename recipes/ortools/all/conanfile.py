@@ -5,17 +5,9 @@ from conan import ConanFile
 from conan.tools.cmake import CMakeToolchain, CMakeDeps, CMake, cmake_layout
 from conan.tools.env import VirtualBuildEnv
 from conan.tools.scm import Git
-from conan.tools.files import rename
-
 
 class ORToolsRecipe(ConanFile):
     name = "ortools"
-
-    # Optional metadata
-    license = "Apache 2.0"
-    author = "Parantapa Bhattacharya <pb@parantapa.net>"
-    url = "https://github.com/parantapa/pb-conan-index"
-    description = "Google's software suite for combinatorial optimization."
 
     # Binary configuration
     settings = "os", "compiler", "build_type", "arch"
@@ -28,8 +20,8 @@ class ORToolsRecipe(ConanFile):
     def requirements(self):
         self.requires("zlib/1.3.1")
         self.requires("bzip2/1.0.8")
-        self.requires("abseil/20250814.0")
-        self.requires("protobuf/6.32.1")
+        self.requires("abseil/20250814.0", transitive_headers=True)
+        self.requires("protobuf/6.32.1", transitive_headers=True)
         self.requires("eigen/5.0.1")
         self.requires("re2/20251105")
 
@@ -85,25 +77,6 @@ class ORToolsRecipe(ConanFile):
         cmake = CMake(self)
         cmake.install()
 
-        rename(
-            self,
-            os.path.join(self.package_folder, "lib", "cmake"),
-            os.path.join(self.package_folder, "lib", "_orig_cmake"),
-        )
-
     def package_info(self):
-        self.cpp_info.libs = ["ortools"]
-        self.cpp_info.system_requires = ["m", "dl", "pthreads"]
-        self.cpp_info.requires = [
-            "zlib::zlib",
-            "bzip2::bzip2",
-            "abseil::abseil",
-            "protobuf::libprotobuf",
-            "re2::re2",
-            "eigen::eigen3",
-        ]
-
-        flatzinc = self.cpp_info.components["flatzinc"]
-        flatzinc.libs = ["ortools_flatzinc", "ortools"]
-        flatzinc.system_requires = self.cpp_info.system_requires
-        flatzinc.requires = self.cpp_info.requires
+        self.cpp_info.set_property("cmake_find_mode", "none")
+        self.cpp_info.builddirs = ["lib/cmake/ortools"]
