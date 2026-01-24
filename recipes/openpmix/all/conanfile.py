@@ -2,7 +2,7 @@
 import os
 
 from conan import ConanFile
-from conan.tools.files import get, rm, rmdir, rename
+from conan.tools.files import get, rm, rename
 from conan.tools.layout import basic_layout
 from conan.tools.gnu import AutotoolsToolchain, Autotools, PkgConfigDeps
 
@@ -10,13 +10,6 @@ from conan.tools.gnu import AutotoolsToolchain, Autotools, PkgConfigDeps
 class OpenPmixRecipe(ConanFile):
     name = "openpmix"
 
-    # Optional metadata
-    license = "BSD-3-Clause"
-    author = "Parantapa Bhattacharya <pb@parantapa.net>"
-    url = "https://github.com/parantapa/pb-conan-index"
-    description = "PMIx Reference Library"
-
-    # Binary configuration
     settings = "os", "compiler", "build_type", "arch"
     options = {"shared": [True, False], "fPIC": [True, False]}
     default_options = {"shared": False, "fPIC": True}
@@ -65,9 +58,7 @@ class OpenPmixRecipe(ConanFile):
         autotools.make(target="install")
 
         rm(self, "*.la", self.package_folder, recursive=True)
-        rmdir(self, os.path.join(self.package_folder, "etc"))
-        rmdir(self, os.path.join(self.package_folder, "share", "doc"))
-        rmdir(self, os.path.join(self.package_folder, "share", "man"))
+
         rename(
             self,
             os.path.join(self.package_folder, "lib", "pkgconfig"),
@@ -78,16 +69,4 @@ class OpenPmixRecipe(ConanFile):
         self.cpp_info.libs = ["pmix"]
         self.cpp_info.includedirs.append(os.path.join("include", "pmix"))
         self.cpp_info.system_libs.extend(["dl", "m", "util"])
-
-        self.cpp_info.requires = [
-            "hwloc::hwloc",
-            "libevent::pthreads",
-            "zlib::zlib",
-            "zlib-ng::zlib-ng",
-            "munge::munge",
-        ]
-
         self.cpp_info.set_property("pkg_config_name", "pmix")
-
-        bin_folder = os.path.join(self.package_folder, "bin")
-        self.runenv_info.prepend_path("PATH", bin_folder)

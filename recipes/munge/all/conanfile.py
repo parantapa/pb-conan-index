@@ -2,7 +2,7 @@
 import os
 
 from conan import ConanFile
-from conan.tools.files import get, rm, rmdir, rename
+from conan.tools.files import get, rm, rename
 from conan.tools.layout import basic_layout
 from conan.tools.gnu import AutotoolsToolchain, Autotools, PkgConfigDeps
 
@@ -10,13 +10,6 @@ from conan.tools.gnu import AutotoolsToolchain, Autotools, PkgConfigDeps
 class MungeRecipe(ConanFile):
     name = "munge"
 
-    # Optional metadata
-    license = "LGPL-3.0"
-    author = "Parantapa Bhattacharya <pb@parantapa.net>"
-    url = "https://github.com/parantapa/pb-conan-index"
-    description = "MUNGE (MUNGE Uid 'N' Gid Emporium) is an authentication service for creating and validating user credentials."
-
-    # Binary configuration
     settings = "os", "compiler", "build_type", "arch"
     options = {"shared": [True, False], "fPIC": [True, False]}
     default_options = {"shared": False, "fPIC": True}
@@ -54,11 +47,7 @@ class MungeRecipe(ConanFile):
         autotools.make(target="install")
 
         rm(self, "*.la", self.package_folder, recursive=True)
-        rmdir(self, os.path.join(self.package_folder, "etc"))
-        rmdir(self, os.path.join(self.package_folder, "share", "man"))
-        rmdir(self, os.path.join(self.package_folder, "lib", "systemd"))
-        rmdir(self, os.path.join(self.package_folder, "lib", "sysusers.d"))
-        rmdir(self, os.path.join(self.package_folder, "var"))
+
         rename(
             self,
             os.path.join(self.package_folder, "lib", "pkgconfig"),

@@ -1,20 +1,12 @@
 # type: ignore
-import os
-
 from conan import ConanFile
-from conan.tools.files import get, rm, rmdir
+from conan.tools.files import get, rm
 from conan.tools.layout import basic_layout
 from conan.tools.gnu import AutotoolsToolchain, Autotools, PkgConfigDeps
 
 
 class PrrteRecipe(ConanFile):
     name = "prrte"
-
-    # Optional metadata
-    license = "BSD-3-Clause"
-    author = "Parantapa Bhattacharya <pb@parantapa.net>"
-    url = "https://github.com/parantapa/pb-conan-index"
-    description = "PMIx Reference RunTime Environment"
 
     # Binary configuration
     settings = "os", "compiler", "build_type", "arch"
@@ -64,18 +56,6 @@ class PrrteRecipe(ConanFile):
         autotools.make(target="install")
 
         rm(self, "*.la", self.package_folder, recursive=True)
-        rmdir(self, os.path.join(self.package_folder, "etc"))
-        rmdir(self, os.path.join(self.package_folder, "share", "doc"))
-        rmdir(self, os.path.join(self.package_folder, "share", "man"))
 
     def package_info(self):
         self.cpp_info.libs = ["prrte"]
-
-        self.cpp_info.requires = [
-            "hwloc::hwloc",
-            "libevent::pthreads",
-            "openpmix::openpmix",
-        ]
-
-        bin_folder = os.path.join(self.package_folder, "bin")
-        self.runenv_info.prepend_path("PATH", bin_folder)
