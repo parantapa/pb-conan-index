@@ -11,11 +11,11 @@ class OpenPmixRecipe(ConanFile):
     name = "openpmix"
 
     settings = "os", "compiler", "build_type", "arch"
-    options = {"shared": [True, False], "fPIC": [True, False]}
-    default_options = {"shared": False, "fPIC": True}
+    options = {"shared": [True, False], "fPIC": [True, False], "debug": [True, False]}
+    default_options = {"shared": False, "fPIC": True, "debug": False}
 
     def requirements(self):
-        self.requires("hwloc/2.11.1")
+        self.requires("hwloc/2.12.2")
         self.requires("libevent/2.1.12")
         self.requires("zlib/1.3.1")
         self.requires("zlib-ng/2.3.2")
@@ -37,6 +37,10 @@ class OpenPmixRecipe(ConanFile):
         deps.generate()
 
         toolchain = AutotoolsToolchain(self, prefix=self.package_folder)
+        if self.options.get_safe("debug"):
+            toolchain.configure_args.append("--enable-memory-sanitizers")
+            toolchain.configure_args.append("--enable-debug")
+
         toolchain.configure_args.append("--with-hwloc=yes")
         toolchain.configure_args.append("--with-libevent=yes")
         toolchain.configure_args.append("--with-zlib=yes")
@@ -69,4 +73,5 @@ class OpenPmixRecipe(ConanFile):
         self.cpp_info.libs = ["pmix"]
         self.cpp_info.includedirs.append(os.path.join("include", "pmix"))
         self.cpp_info.system_libs.extend(["dl", "m", "util"])
+
         self.cpp_info.set_property("pkg_config_name", "pmix")

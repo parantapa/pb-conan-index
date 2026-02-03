@@ -8,15 +8,14 @@ from conan.tools.gnu import AutotoolsToolchain, Autotools, PkgConfigDeps
 class PrrteRecipe(ConanFile):
     name = "prrte"
 
-    # Binary configuration
     settings = "os", "compiler", "build_type", "arch"
     options = {"shared": [True, False], "fPIC": [True, False]}
     default_options = {"shared": False, "fPIC": True}
 
     def requirements(self):
-        self.requires("hwloc/2.11.1")
+        self.requires("hwloc/2.12.2")
         self.requires("libevent/2.1.12")
-        self.requires("openpmix/5.0.9.pci")
+        self.requires("openpmix/5.0.10.pci")
 
     def source(self):
         get(self, **self.conan_data["sources"][self.version])

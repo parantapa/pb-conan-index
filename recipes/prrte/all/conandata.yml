@@ -1,4 +1,8 @@
 sources:
+  "3.0.13.pci":
+    url: "https://github.com/openpmix/prrte/releases/download/v3.0.13/prrte-3.0.13.tar.gz"
+    sha256: "81c27025182a26e90b0bb6aa67929a9313186fbd43964fc6d8734ce5cecd00ae"
+    strip_root: true
   "3.0.12.pci":
     url: "https://github.com/openpmix/prrte/releases/download/v3.0.12/prrte-3.0.12.tar.gz"
     sha256: "843813bfbcfe7a5a6a3ba8ad273b7b657100fdc396d4efede92f4d366a55432f"

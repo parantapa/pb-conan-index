@@ -15,7 +15,7 @@ class MungeRecipe(ConanFile):
     default_options = {"shared": False, "fPIC": True}
 
     def requirements(self):
-        self.requires("openssl/3.6.0")
+        self.requires("openssl/3.6.1")
         self.requires("zlib/1.3.1")
         self.requires("bzip2/1.0.8")
 
