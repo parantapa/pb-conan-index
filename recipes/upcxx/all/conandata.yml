@@ -1,0 +1,13 @@
+sources:
+  "2025.10.0.pci":
+    "upcxx":
+      url: "https://bitbucket.org/berkeleylab/upcxx/downloads/upcxx-2025.10.0.tar.gz"
+      sha256: "bb43348d351777b7462e6bbadda358b426cd150e138ac08ee74649b91bba32ec"
+      strip_root: true
+      destination: "upcxx"
+    "gasnet":
+      url: "https://gasnet.lbl.gov/EX/GASNet-2025.8.0.tar.gz"
+      sha256: "bd5919099477d1d2f59c247d006e9d1ac017c9190c974f5e069667418e5bf48d"
+      strip_root: true
+      destination: "gasnet"
+

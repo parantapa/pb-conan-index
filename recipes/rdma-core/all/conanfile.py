@@ -2,7 +2,7 @@
 import os
 
 from conan import ConanFile
-from conan.tools.files import get, patch, rmdir, rename, replace_in_file
+from conan.tools.files import get, patch, rename, replace_in_file
 from conan.tools.gnu import PkgConfigDeps
 from conan.tools.cmake import CMakeToolchain, CMake, cmake_layout
 
@@ -10,13 +10,6 @@ from conan.tools.cmake import CMakeToolchain, CMake, cmake_layout
 class RdmaCoreRecipe(ConanFile):
     name = "rdma-core"
 
-    # Optional metadata
-    license = ("GPL-2.0", "Linux-OpenIB", "BSD-2-Clause")
-    author = "Parantapa Bhattacharya <pb@parantapa.net>"
-    url = "https://github.com/parantapa/pb-conan-index"
-    description = "RDMA core userspace libraries."
-
-    # Binary configuration
     settings = "os", "compiler", "build_type", "arch"
     options = {"shared": [True], "fPIC": [True, False]}
     default_options = {"shared": True, "fPIC": True}
@@ -67,7 +60,6 @@ class RdmaCoreRecipe(ConanFile):
         cmake = CMake(self)
         cmake.install()
 
-        rmdir(self, os.path.join(self.package_folder, "share", "doc"))
         rename(
             self,
             os.path.join(self.package_folder, "lib", "pkgconfig"),
@@ -91,6 +83,3 @@ class RdmaCoreRecipe(ConanFile):
         _add_component(
             "librdmacm", ["libibverbs", "libnl::nl", "libnl::nl-route"], pthread=True
         )
-
-        bin_folder = os.path.join(self.package_folder, "bin")
-        self.runenv_info.prepend_path("PATH", bin_folder)
