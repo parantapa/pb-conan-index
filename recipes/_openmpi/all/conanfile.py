@@ -2,7 +2,7 @@
 import os
 
 from conan import ConanFile
-from conan.tools.files import get, rmdir, rm, rename
+from conan.tools.files import get, rm, rename
 from conan.tools.layout import basic_layout
 from conan.tools.gnu import AutotoolsToolchain, Autotools, PkgConfigDeps
 
@@ -151,8 +151,6 @@ class OpenMPIRecipe(ConanFile):
         autotools.make(target="install")
 
         rm(self, "*.la", self.package_folder, recursive=True)
-        rmdir(self, os.path.join(self.package_folder, "share", "doc"))
-        rmdir(self, os.path.join(self.package_folder, "share", "man"))
         rename(
             self,
             os.path.join(self.package_folder, "lib", "pkgconfig"),

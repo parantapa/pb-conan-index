@@ -10,12 +10,6 @@ from conan.tools.gnu import AutotoolsToolchain, Autotools, PkgConfigDeps
 class OpenUccRecipe(ConanFile):
     name = "openucc"
 
-    # Optional metadata
-    license = "BSD-3-Clause"
-    author = "Parantapa Bhattacharya <pb@parantapa.net>"
-    url = "https://github.com/parantapa/pb-conan-index"
-    description = "UCC is a collective communication operations API and library that is flexible, complete, and feature-rich for current and emerging programming models and runtimes."
-
     # Binary configuration
     settings = "os", "compiler", "build_type", "arch"
     options = {
@@ -23,8 +17,15 @@ class OpenUccRecipe(ConanFile):
         "fPIC": [True, False],
         "rdma": [True, False],
         "cuda": [True, False],
+        "valgrind": [True, False],
     }
-    default_options = {"shared": True, "fPIC": True, "rdma": False, "cuda": False}
+    default_options = {
+        "shared": True,
+        "fPIC": True,
+        "rdma": False,
+        "cuda": False,
+        "valgrind": False,
+    }
 
     def build_requirements(self):
         self.tool_requires("autoconf/2.72")
@@ -35,6 +36,7 @@ class OpenUccRecipe(ConanFile):
             options=dict(
                 rdma=self.options.get_safe("rdma"),
                 cuda=self.options.get_safe("cuda"),
+                valgrind=self.options.get_safe("valgrind"),
             ),
         )
 
@@ -63,10 +65,16 @@ class OpenUccRecipe(ConanFile):
         deps.generate()
 
         toolchain = AutotoolsToolchain(self, prefix=self.package_folder)
-        toolchain.configure_args.append("--with-valgrind=no")
+        if self.options.get_safe("valgrind"):
+            toolchain.configure_args.append("--with-valgrind=yes")
+        else:
+            toolchain.configure_args.append("--with-valgrind=no")
+
         toolchain.configure_args.append("--with-mpi=no")
 
-        toolchain.configure_args.append(f"--with-ucx={self.dependencies['openucx'].package_folder}")
+        toolchain.configure_args.append(
+            f"--with-ucx={self.dependencies['openucx'].package_folder}"
+        )
 
         if self.cuda_home is not None:
             toolchain.configure_args.append(f"--with-cuda={self.cuda_home}")
@@ -118,10 +126,7 @@ class OpenUccRecipe(ConanFile):
         self.cpp_info.libs = ["ucc"]
         self.cpp_info.set_property("pkg_config_name", "ucc")
 
-        self.cpp_info.requires = ["openucx::openucx"]
-
         if self.cuda_home:
             self.cpp_info.system_libs.append("cuda")
 
-        bin_folder = os.path.join(self.package_folder, "bin")
-        self.runenv_info.prepend_path("PATH", bin_folder)
+        # self.cpp_info.requires = ["openucx::openucx"]

@@ -10,12 +10,6 @@ from conan.tools.gnu import AutotoolsToolchain, Autotools
 class OpenUCXRecipe(ConanFile):
     name = "openucx"
 
-    # Optional metadata
-    license = "BSD-3-Clause"
-    author = "Parantapa Bhattacharya <pb@parantapa.net>"
-    url = "https://github.com/parantapa/pb-conan-index"
-    description = "Unified Communication X (UCX) is a optimized production-proven communication framework for modern, high-bandwidth and low-latency networks."
-
     # Binary configuration
     settings = "os", "compiler", "build_type", "arch"
     options = {
@@ -23,8 +17,15 @@ class OpenUCXRecipe(ConanFile):
         "fPIC": [True, False],
         "rdma": [True, False],
         "cuda": [True, False],
+        "valgrind": [True, False],
     }
-    default_options = {"shared": True, "fPIC": True, "rdma": False, "cuda": False}
+    default_options = {
+        "shared": True,
+        "fPIC": True,
+        "rdma": False,
+        "cuda": False,
+        "valgrind": False,
+    }
 
     def requirements(self):
         if self.options.get_safe("rdma"):
@@ -52,10 +53,18 @@ class OpenUCXRecipe(ConanFile):
 
     def generate(self):
         toolchain = AutotoolsToolchain(self, prefix=self.package_folder)
+        toolchain.configure_args.append("--disable-logging")
+        toolchain.configure_args.append("--disable-debug")
+        toolchain.configure_args.append("--disable-assertions")
+        toolchain.configure_args.append("--disable-params-check")
+
         toolchain.configure_args.append("--enable-cma=yes")
         toolchain.configure_args.append("--with-bfd=yes")
 
-        toolchain.configure_args.append("--with-valgrind=no")
+        if self.options.get_safe("valgrind"):
+            toolchain.configure_args.append("--with-valgrind=yes")
+        else:
+            toolchain.configure_args.append("--with-valgrind=no")
 
         if self.cuda_home is not None:
             toolchain.configure_args.append(f"--with-cuda={self.cuda_home}")
@@ -136,11 +145,11 @@ class OpenUCXRecipe(ConanFile):
         self.cpp_info.libs = ["ucp", "uct", "ucs", "ucm"]
         self.cpp_info.set_property("pkg_config_name", "ucx")
 
-        if self.options.get_safe("rdma"):
-            self.cpp_info.requires = [
-                "rdma-core::libibverbs",
-                "rdma-core::libmlx5",
-            ]
+        if self.cuda_home:
+            self.cpp_info.system_libs.append("cuda")
 
-        bin_folder = os.path.join(self.package_folder, "bin")
-        self.runenv_info.prepend_path("PATH", bin_folder)
+        # if self.options.get_safe("rdma"):
+        #     self.cpp_info.requires = [
+        #         "rdma-core::libibverbs",
+        #         "rdma-core::libmlx5",
+        #     ]
