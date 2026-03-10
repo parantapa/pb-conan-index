@@ -1,0 +1,5 @@
+sources:
+  "0.9.1.pci":
+    url: "https://github.com/stevegrubb/libcap-ng/archive/refs/tags/v0.9.1.tar.gz"
+    sha256: "52418b8940f83dcc00dcd01d187e67c3399ff65f3fa558442e3a21b415cc46c0"
+    strip_root: true
