@@ -1,0 +1,5 @@
+sources:
+  "1.4.0.pci":
+    url: "https://github.com/icecc/icecream/releases/download/1.4/icecc-1.4.0.tar.gz"
+    sha256: "884caebb93afa096e6d881677b9a432ae528bab297725f1d737a463ab45ba393"
+    strip_root: true
