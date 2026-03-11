@@ -5,7 +5,7 @@ from conan import ConanFile
 from conan.tools.files import get, rm, rename
 from conan.tools.files.symlinks import remove_broken_symlinks
 from conan.tools.layout import basic_layout
-from conan.tools.gnu import AutotoolsToolchain, Autotools, PkgConfigDeps
+from conan.tools.gnu import AutotoolsToolchain, Autotools, PkgConfigDeps, AutotoolsDeps
 
 
 class IcecreamRecipe(ConanFile):
@@ -24,6 +24,11 @@ class IcecreamRecipe(ConanFile):
         self.requires("lzo/2.10")
         self.requires("zstd/1.5.7")
 
+    def build_requirements(self):
+        self.tool_requires("automake/1.16.5")
+        self.tool_requires("libtool/2.4.7")
+        self.tool_requires("pkgconf/2.5.1")
+
     def source(self):
         get(self, **self.conan_data["sources"][self.version])
 
@@ -35,15 +40,20 @@ class IcecreamRecipe(ConanFile):
         basic_layout(self)
 
     def generate(self):
-        deps = PkgConfigDeps(self)
-        deps.generate()
+        deps1 = AutotoolsDeps(self)
+        deps1.generate()
+
+        deps2 = PkgConfigDeps(self)
+        deps2.generate()
 
         toolchain = AutotoolsToolchain(self)
         toolchain.generate()
 
     def build(self):
+        self.run("./autogen.sh", cwd=self.source_folder)
+
         autotools = Autotools(self)
-        autotools.configure()
+        autotools.configure(args=["--without-man"])
         autotools.make()
 
     def package(self):
