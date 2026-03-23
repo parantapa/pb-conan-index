@@ -31,7 +31,7 @@ class PrrteRecipe(ConanFile):
         deps = PkgConfigDeps(self)
         deps.generate()
 
-        toolchain = AutotoolsToolchain(self, prefix=self.package_folder)
+        toolchain = AutotoolsToolchain(self)
         toolchain.configure_args.append("--with-libevent=yes")
         toolchain.configure_args.append("--with-hwloc=yes")
         toolchain.configure_args.append("--with-pmix=yes")
@@ -52,7 +52,7 @@ class PrrteRecipe(ConanFile):
 
     def package(self):
         autotools = Autotools(self)
-        autotools.make(target="install")
+        autotools.install()
 
         rm(self, "*.la", self.package_folder, recursive=True)
 

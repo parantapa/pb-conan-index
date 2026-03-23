@@ -36,7 +36,7 @@ class OpenPmixRecipe(ConanFile):
         deps.set_property("zlib-ng", "pkg_config_name", "zlibng")
         deps.generate()
 
-        toolchain = AutotoolsToolchain(self, prefix=self.package_folder)
+        toolchain = AutotoolsToolchain(self)
         if self.options.get_safe("debug"):
             toolchain.configure_args.append("--enable-memory-sanitizers")
             toolchain.configure_args.append("--enable-debug")
@@ -59,7 +59,7 @@ class OpenPmixRecipe(ConanFile):
 
     def package(self):
         autotools = Autotools(self)
-        autotools.make(target="install")
+        autotools.install()
 
         rm(self, "*.la", self.package_folder, recursive=True)
 
