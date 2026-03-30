@@ -17,18 +17,18 @@ class UpcxxRecipe(ConanFile):
     options = {
         "shared": [False],
         "fPIC": [True, False],
-        "rdma": [True, False],
+        "with_ibv": [True, False],
     }
     default_options = {
         "shared": False,
         "fPIC": True,
-        "rdma": False,
+        "with_ibv": False,
     }
 
     def requirements(self):
         self.requires("hwloc/2.12.2")
         self.requires("openpmix/5.0.10.pci")
-        if self.options.get_safe("rdma"):
+        if self.options.get_safe("with_ibv"):
             self.requires("rdma-core/61.0.pci")
 
     def source(self):
@@ -80,7 +80,7 @@ class UpcxxRecipe(ConanFile):
         configure_args.append("--enable-smp")
         configure_args.append("--with-smp-spawner=pmi")
 
-        if self.options.get_safe("rdma"):
+        if self.options.get_safe("with_ibv"):
             ibv_home = self.dependencies["rdma-core"].package_folder
             ibv_cflags = self._get_cflags("libmlx5")
             ibv_libs = self._get_libs("libmlx5")
@@ -142,7 +142,7 @@ class UpcxxRecipe(ConanFile):
         threadmodes = ["seq", "par"]
         codemodes = ["opt"]
 
-        if self.options.get_safe("rdma"):
+        if self.options.get_safe("with_ibv"):
             networks.append("ibv")
 
         for net in networks:
