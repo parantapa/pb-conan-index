@@ -47,6 +47,9 @@ class UpcxxRecipe(ConanFile):
         deps.generate()
 
         toolchain = AutotoolsToolchain(self)
+        # toolchain.ndebug = None
+        # toolchain.build_type_flags.clear()
+        # toolchain.build_type_link_flags.clear()
         toolchain.generate()
 
     def _get_cflags(self, pc):
@@ -140,7 +143,6 @@ class UpcxxRecipe(ConanFile):
     def package_info(self):
         networks = ["smp"]
         threadmodes = ["seq", "par"]
-        codemodes = ["opt"]
 
         if self.options.get_safe("with_ibv"):
             networks.append("ibv")
@@ -165,28 +167,27 @@ class UpcxxRecipe(ConanFile):
 
         for net in networks:
             for tmode in threadmodes:
-                for cmode in codemodes:
-                    comp = self.cpp_info.components[f"{net}-{tmode}-{cmode}"]
+                comp = self.cpp_info.components[f"{net}-{tmode}"]
 
-                    comp.defines.append("UPCXXI_ASSERT_ENABLED=0")
-                    comp.defines.append("UPCXXI_BACKEND=1")
-                    comp.defines.append(f"UPCXXI_BACKEND_GASNET_{tmode.upper()}=1")
+                comp.defines.append("UPCXXI_ASSERT_ENABLED=0")
+                comp.defines.append("UPCXXI_BACKEND=1")
+                comp.defines.append(f"UPCXXI_BACKEND_GASNET_{tmode.upper()}=1")
 
-                    comp.includedirs.append(
-                        os.path.join(
-                            self.package_folder,
-                            f"upcxx.{cmode}.gasnet_{tmode}.{net}",
-                            "gen_include",
-                        )
+                comp.includedirs.append(
+                    os.path.join(
+                        self.package_folder,
+                        f"upcxx.opt.gasnet_{tmode}.{net}",
+                        "gen_include",
                     )
+                )
 
-                    comp.libs = ["upcxx"]
-                    comp.libdirs.append(
-                        os.path.join(
-                            self.package_folder,
-                            f"upcxx.{cmode}.gasnet_{tmode}.{net}",
-                            "lib",
-                        )
+                comp.libs = ["upcxx"]
+                comp.libdirs.append(
+                    os.path.join(
+                        self.package_folder,
+                        f"upcxx.opt.gasnet_{tmode}.{net}",
+                        "lib",
                     )
+                )
 
-                    comp.requires.append(f"gasnet-{net}-{tmode}")
+                comp.requires.append(f"gasnet-{net}-{tmode}")
