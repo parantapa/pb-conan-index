@@ -15,7 +15,7 @@ class UpcxxRecipe(ConanFile):
     # Binary configuration
     settings = "os", "compiler", "build_type", "arch"
     options = {
-        "shared": [False],
+        "shared": [True, False],
         "fPIC": [True, False],
         "with_ibv": [True, False],
     }
