@@ -191,3 +191,9 @@ class UpcxxRecipe(ConanFile):
                 )
 
                 comp.requires.append(f"gasnet-{net}-{tmode}")
+
+        default_comp = self.cpp_info.components["default"]
+        if self.options.get_safe("with_ibv"):
+            default_comp.requires.append("ibv-par")
+        else:
+            default_comp.requires.append("smp-par")
