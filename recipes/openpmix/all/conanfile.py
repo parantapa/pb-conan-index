@@ -17,7 +17,7 @@ class OpenPmixRecipe(ConanFile):
     def requirements(self):
         self.requires("hwloc/2.12.2")
         self.requires("libevent/2.1.12")
-        self.requires("zlib/1.3.1")
+        self.requires("zlib/1.3.2")
         self.requires("zlib-ng/2.3.2")
         self.requires("munge/0.5.17.pci")
 

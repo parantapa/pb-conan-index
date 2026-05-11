@@ -16,7 +16,7 @@ class MungeRecipe(ConanFile):
 
     def requirements(self):
         self.requires("openssl/3.6.2")
-        self.requires("zlib/1.3.1")
+        self.requires("zlib/1.3.2")
         self.requires("bzip2/1.0.8")
 
     def source(self):
