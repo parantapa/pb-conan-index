@@ -4,7 +4,7 @@ import os
 from conan import ConanFile
 from conan.tools.files import get, rm, rename
 from conan.tools.layout import basic_layout
-from conan.tools.gnu import AutotoolsToolchain, Autotools, PkgConfigDeps
+from conan.tools.gnu import AutotoolsToolchain, Autotools, PkgConfigDeps, AutotoolsDeps
 
 
 class OpenPmixRecipe(ConanFile):
@@ -32,9 +32,12 @@ class OpenPmixRecipe(ConanFile):
         basic_layout(self)
 
     def generate(self):
-        deps = PkgConfigDeps(self)
-        deps.set_property("zlib-ng", "pkg_config_name", "zlibng")
-        deps.generate()
+        deps1 = PkgConfigDeps(self)
+        deps1.set_property("zlib-ng", "pkg_config_name", "zlibng")
+        deps1.generate()
+
+        deps2 = AutotoolsDeps(self)
+        deps2.generate()
 
         toolchain = AutotoolsToolchain(self)
         if self.options.get_safe("debug"):
