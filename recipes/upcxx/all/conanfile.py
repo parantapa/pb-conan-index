@@ -165,6 +165,12 @@ class UpcxxRecipe(ConanFile):
                     comp.requires.append("rdma-core::libibverbs")
                     comp.requires.append("rdma-core::libmlx5")
 
+        gasnet_default_comp = self.cpp_info.components["gasnet-default"]
+        if self.options.get_safe("with_ibv"):
+            gasnet_default_comp.requires.append("gasnet-ibv-par")
+        else:
+            gasnet_default_comp.requires.append("gasnet-smp-par")
+
         for net in networks:
             for tmode in threadmodes:
                 comp = self.cpp_info.components[f"{net}-{tmode}"]
