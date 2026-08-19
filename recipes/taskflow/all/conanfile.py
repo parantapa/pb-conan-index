@@ -10,6 +10,18 @@ from conan.tools.scm import Git
 class TaskflowRecipe(ConanFile):
     name = "taskflow"
 
+    description = "A general-purpose parallel and heterogeneous task programming system"
+    license = "MIT"
+    url = "https://github.com/parantapa/pb-conan-index"
+    homepage = "https://taskflow.github.io"
+    topics = (
+        "parallel",
+        "task-parallelism",
+        "concurrency",
+        "threadpool",
+        "header-only",
+    )
+
     package_type = "header-library"
     implements = ["auto_header_only"]
     settings = "os", "arch", "compiler", "build_type"
@@ -21,9 +33,11 @@ class TaskflowRecipe(ConanFile):
         tag = "v" + self.version.removesuffix(".pci")
 
         git = Git(self)
-        git.clone(url="https://github.com/taskflow/taskflow.git", target="taskflow")
-        git.folder = "taskflow"
-        git.checkout(commit=tag)
+        git.clone(
+            url="https://github.com/taskflow/taskflow.git",
+            target="taskflow",
+            args=["--branch", tag, "--depth", "1"],
+        )
 
     def package(self):
         copy(

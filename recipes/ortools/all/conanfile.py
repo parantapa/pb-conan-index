@@ -4,11 +4,23 @@ import os
 from conan import ConanFile
 from conan.tools.cmake import CMakeToolchain, CMakeDeps, CMake, cmake_layout
 from conan.tools.scm import Git
-from conan.tools.files import rename
+from conan.tools.files import copy, rename
 
 
 class ORToolsRecipe(ConanFile):
     name = "ortools"
+
+    description = "Google OR-Tools: a software suite for combinatorial optimization"
+    license = "Apache-2.0"
+    url = "https://github.com/parantapa/pb-conan-index"
+    homepage = "https://developers.google.com/optimization"
+    topics = (
+        "optimization",
+        "operations-research",
+        "linear-programming",
+        "constraint-programming",
+        "mixed-integer-programming",
+    )
 
     settings = "os", "compiler", "build_type", "arch"
     options = {
@@ -68,6 +80,13 @@ class ORToolsRecipe(ConanFile):
         cmake.build()
 
     def package(self):
+        copy(
+            self,
+            "LICENSE",
+            src=os.path.join(self.source_folder, "or-tools"),
+            dst=os.path.join(self.package_folder, "licenses"),
+        )
+
         cmake = CMake(self)
         cmake.install()
 

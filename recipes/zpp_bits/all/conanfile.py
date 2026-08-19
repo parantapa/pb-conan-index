@@ -10,6 +10,12 @@ from conan.tools.scm import Git
 class ZppBitsRecipe(ConanFile):
     name = "zpp_bits"
 
+    description = "A lightweight C++20 binary serialization and RPC library"
+    license = "MIT"
+    url = "https://github.com/parantapa/pb-conan-index"
+    homepage = "https://github.com/eyalz800/zpp_bits"
+    topics = ("serialization", "binary", "rpc", "cpp20", "header-only")
+
     package_type = "header-library"
     implements = ["auto_header_only"]
     settings = "os", "arch", "compiler", "build_type"
@@ -21,9 +27,11 @@ class ZppBitsRecipe(ConanFile):
         tag = "v" + self.version.removesuffix(".pci")
 
         git = Git(self)
-        git.clone(url="https://github.com/eyalz800/zpp_bits.git", target="zpp_bits")
-        git.folder = "zpp_bits"
-        git.checkout(commit=tag)
+        git.clone(
+            url="https://github.com/eyalz800/zpp_bits.git",
+            target="zpp_bits",
+            args=["--branch", tag, "--depth", "1"],
+        )
 
     def package(self):
         copy(

@@ -9,6 +9,21 @@ class Gurobi(ConanFile):
     name = "gurobi"
     version = "13.0.0"
 
+    description = (
+        "Gurobi Optimizer: a commercial solver for LP, QP, QCP, MIP, MIQP "
+        "and MIQCP models"
+    )
+    license = "Proprietary"
+    url = "https://github.com/parantapa/pb-conan-index"
+    homepage = "https://www.gurobi.com"
+    topics = (
+        "optimization",
+        "solver",
+        "linear-programming",
+        "mixed-integer-programming",
+        "pre-built",
+    )
+
     package_type = "shared-library"
     settings = "os", "compiler", "build_type", "arch"
     no_copy_source = True
@@ -43,6 +58,18 @@ class Gurobi(ConanFile):
         )
 
     def package(self):
+        copy(
+            self,
+            "EULA.pdf",
+            os.path.join(self.source_folder, "linux64"),
+            os.path.join(self.package_folder, "licenses"),
+        )
+        copy(
+            self,
+            "*.txt",
+            os.path.join(self.source_folder, "linux64/licenses"),
+            os.path.join(self.package_folder, "licenses", "third-party"),
+        )
         copy(
             self,
             "include/*.h",
