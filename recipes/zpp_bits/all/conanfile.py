@@ -2,9 +2,8 @@
 import os
 
 from conan import ConanFile
-from conan.tools.files import copy
+from conan.tools.files import copy, get
 from conan.tools.layout import basic_layout
-from conan.tools.scm import Git
 
 
 class ZppBitsRecipe(ConanFile):
@@ -24,26 +23,19 @@ class ZppBitsRecipe(ConanFile):
         basic_layout(self, src_folder="zpp_bits")
 
     def source(self):
-        tag = "v" + self.version.removesuffix(".pci")
-
-        git = Git(self)
-        git.clone(
-            url="https://github.com/eyalz800/zpp_bits.git",
-            target="zpp_bits",
-            args=["--branch", tag, "--depth", "1"],
-        )
+        get(self, **self.conan_data["sources"][self.version], strip_root=True)
 
     def package(self):
         copy(
             self,
             "LICENSE",
-            src=os.path.join(self.source_folder, "zpp_bits"),
+            src=self.source_folder,
             dst=os.path.join(self.package_folder, "licenses"),
         )
         copy(
             self,
             "zpp_bits.h",
-            src=os.path.join(self.source_folder, "zpp_bits"),
+            src=self.source_folder,
             dst=os.path.join(self.package_folder, "include"),
         )
 

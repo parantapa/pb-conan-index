@@ -1,0 +1,4 @@
+sources:
+  "4.7.6.pci":
+    url: "https://github.com/eyalz800/zpp_bits/archive/refs/tags/v4.7.6.tar.gz"
+    sha256: "536b40cf921e2a88739668785181f09de1fab4be1b3ca9172f2702fc3700abf9"

@@ -1,5 +1,3 @@
 versions:
-  "4.7.1.pci":
-    folder: all
-  "4.7.pci":
+  "4.7.6.pci":
     folder: all
