@@ -2,9 +2,8 @@
 import os
 
 from conan import ConanFile
-from conan.tools.files import copy
+from conan.tools.files import copy, get
 from conan.tools.layout import basic_layout
-from conan.tools.scm import Git
 
 
 class TaskflowRecipe(ConanFile):
@@ -30,26 +29,19 @@ class TaskflowRecipe(ConanFile):
         basic_layout(self, src_folder="taskflow")
 
     def source(self):
-        tag = "v" + self.version.removesuffix(".pci")
-
-        git = Git(self)
-        git.clone(
-            url="https://github.com/taskflow/taskflow.git",
-            target="taskflow",
-            args=["--branch", tag, "--depth", "1"],
-        )
+        get(self, **self.conan_data["sources"][self.version], strip_root=True)
 
     def package(self):
         copy(
             self,
             "LICENSE",
-            src=os.path.join(self.source_folder, "taskflow"),
+            src=self.source_folder,
             dst=os.path.join(self.package_folder, "licenses"),
         )
         copy(
             self,
             "*",
-            src=os.path.join(self.source_folder, "taskflow", "taskflow"),
+            src=os.path.join(self.source_folder, "taskflow"),
             dst=os.path.join(self.package_folder, "include", "taskflow"),
         )
 
