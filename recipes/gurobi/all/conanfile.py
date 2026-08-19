@@ -7,7 +7,6 @@ from conan.tools.files import copy, get
 
 class Gurobi(ConanFile):
     name = "gurobi"
-    version = "13.0.0"
 
     description = (
         "Gurobi Optimizer: a commercial solver for LP, QP, QCP, MIP, MIQP "
@@ -28,6 +27,13 @@ class Gurobi(ConanFile):
     settings = "os", "compiler", "build_type", "arch"
     no_copy_source = True
 
+    @property
+    def _lib_version(self):
+        # Gurobi names its shared library after the major and minor version,
+        # so 13.0.0 ships "libgurobi130.so".
+        major, minor, _ = self.version.removesuffix(".pci").split(".")
+        return f"{major}{minor}"
+
     def validate(self):
         if self.settings.os != "Linux" or self.settings.arch != "x86_64":
             raise ConanInvalidConfiguration(
@@ -36,12 +42,7 @@ class Gurobi(ConanFile):
             )
 
     def source(self):
-        get(
-            self,
-            "https://packages.gurobi.com/13.0/gurobi13.0.0_linux64.tar.gz",
-            sha256="98455455709e8b34b34032ed90d4bf1246b14f4313a312f7c775066ff5c1f652",
-            strip_root=True,
-        )
+        get(self, **self.conan_data["sources"][self.version], strip_root=True)
 
     def build(self):
         copy(self, "linux64/src/*", self.source_folder, self.build_folder)
@@ -84,16 +85,16 @@ class Gurobi(ConanFile):
         )
         copy(
             self,
-            f"libgurobi.so.{self.version}",
+            f"libgurobi.so.{self.version.removesuffix('.pci')}",
             os.path.join(self.source_folder, "linux64/lib"),
             os.path.join(self.package_folder, "lib"),
         )
         copy(
             self,
-            f"libgurobi130.so",
+            f"libgurobi{self._lib_version}.so",
             os.path.join(self.source_folder, "linux64/lib"),
             os.path.join(self.package_folder, "lib"),
         )
 
     def package_info(self):
-        self.cpp_info.libs = ["gurobi_c++", "gurobi130"]
+        self.cpp_info.libs = ["gurobi_c++", f"gurobi{self._lib_version}"]

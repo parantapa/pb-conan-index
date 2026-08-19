@@ -1,0 +1,4 @@
+sources:
+  "13.0.0":
+    url: "https://packages.gurobi.com/13.0/gurobi13.0.0_linux64.tar.gz"
+    sha256: "98455455709e8b34b34032ed90d4bf1246b14f4313a312f7c775066ff5c1f652"
