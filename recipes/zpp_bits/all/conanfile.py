@@ -11,10 +11,11 @@ class ZppBitsRecipe(ConanFile):
     name = "zpp_bits"
 
     package_type = "header-library"
+    implements = ["auto_header_only"]
     settings = "os", "arch", "compiler", "build_type"
 
     def layout(self):
-        basic_layout(self, src_folder="taskflow")
+        basic_layout(self, src_folder="zpp_bits")
 
     def source(self):
         tag = "v" + self.version.removesuffix(".pci")

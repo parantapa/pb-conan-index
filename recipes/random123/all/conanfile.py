@@ -6,15 +6,18 @@ from conan.tools.scm import Git
 
 class Random123(ConanFile):
     name = "random123"
-    version = "1.14.0"
+
+    package_type = "header-library"
     no_copy_source = True
 
     def source(self):
+        tag = "v" + self.version.removesuffix(".pci")
+
         git = Git(self)
         git.clone(
             url="https://github.com/DEShawResearch/random123.git",
             target=".",
-            args=["--branch", f"v{self.version}", "--depth", "1"],
+            args=["--branch", tag, "--depth", "1"],
         )
 
     def package(self):
