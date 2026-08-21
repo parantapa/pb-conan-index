@@ -1,0 +1,4 @@
+sources:
+  "20260806.pci":
+    url: "https://github.com/emil-e/rapidcheck.git"
+    commit: "6e8dadfdafa3a74eabb52ead87f8787f72eccd0b"

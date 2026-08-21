@@ -16,6 +16,7 @@ so conan can consume it directly as a local recipes index remote.
 | `gurobi` | `13.0.0.pci` | <https://www.gurobi.com> |
 | `ortools` | `9.15.pci` | <https://github.com/google/or-tools> |
 | `random123` | `1.14.0.pci` | <https://github.com/DEShawResearch/random123> |
+| `rapidcheck` | `20260806.pci` | <https://github.com/emil-e/rapidcheck> |
 | `taskflow` | `4.1.0.pci` | <https://github.com/taskflow/taskflow> |
 | `zpp_bits` | `4.7.6.pci` | <https://github.com/eyalz800/zpp_bits> |
 
@@ -24,6 +25,9 @@ It marks the recipe as packaged by this index,
 and keeps it apart from a recipe of the same name and version elsewhere;
 conancenter, for instance, ships its own `taskflow` and `zpp_bits`.
 
+`rapidcheck` has no upstream releases,
+so its version is the date of the git revision the recipe pins.
+
 ## Layout
 
 Each package lives under `recipes/<package>`:
@@ -31,7 +35,7 @@ Each package lives under `recipes/<package>`:
 ```
 recipes/<package>/config.yml            versions and the folder that builds them
 recipes/<package>/all/conanfile.py      the recipe
-recipes/<package>/all/conandata.yml     source urls and checksums, when the recipe fetches an archive
+recipes/<package>/all/conandata.yml     per version source data: archive url and checksum, or git revision
 ```
 
 ## Setup
@@ -76,5 +80,8 @@ conan install . --build=missing
 
 In CMake, `taskflow` is found as `find_package(Taskflow)`
 and linked as `Taskflow::Taskflow`.
+`rapidcheck` is found as `find_package(rapidcheck)`
+and linked as `rapidcheck`, without a namespace,
+matching the target upstream exports.
 The other packages use the conan defaults,
 so `random123` is `find_package(random123)` and `random123::random123`.
