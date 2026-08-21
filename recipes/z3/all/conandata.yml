@@ -1,0 +1,4 @@
+sources:
+  "5.1.0.pci":
+    url: "https://github.com/Z3Prover/z3/archive/refs/tags/z3-5.1.0.tar.gz"
+    sha256: "c433e1add0431c5edf1644bd9951c40588024d2d288f0e4215e5fcb6e3b4277d"

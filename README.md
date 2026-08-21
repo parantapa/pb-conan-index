@@ -18,6 +18,7 @@ so conan can consume it directly as a local recipes index remote.
 | `random123` | `1.14.0.pci` | <https://github.com/DEShawResearch/random123> |
 | `rapidcheck` | `20260806.pci` | <https://github.com/emil-e/rapidcheck> |
 | `taskflow` | `4.1.0.pci` | <https://github.com/taskflow/taskflow> |
+| `z3` | `5.1.0.pci` | <https://github.com/Z3Prover/z3> |
 | `zpp_bits` | `4.7.6.pci` | <https://github.com/eyalz800/zpp_bits> |
 
 Every version carries a `.pci` suffix.
@@ -27,6 +28,10 @@ conancenter, for instance, ships its own `taskflow` and `zpp_bits`.
 
 `rapidcheck` has no upstream releases,
 so its version is the date of the git revision the recipe pins.
+
+The `z3` recipe packages the C and C++ library only;
+the z3 executable and the python, java, dotnet, julia, ocaml
+and go bindings are not built.
 
 ## Layout
 
@@ -83,5 +88,7 @@ and linked as `Taskflow::Taskflow`.
 `rapidcheck` is found as `find_package(rapidcheck)`
 and linked as `rapidcheck`, without a namespace,
 matching the target upstream exports.
+`z3` is found as `find_package(Z3)`
+and linked as `z3::libz3`.
 The other packages use the conan defaults,
 so `random123` is `find_package(random123)` and `random123::random123`.
