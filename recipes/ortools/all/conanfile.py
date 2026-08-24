@@ -42,17 +42,17 @@ class ORToolsRecipe(ConanFile):
     extension_properties = {"compatibility_cppstd": False}
 
     def requirements(self):
-        self.requires("zlib/1.3.1", transitive_headers=True, transitive_libs=True)
+        self.requires("zlib/1.3.2", transitive_headers=True, transitive_libs=True)
         self.requires("bzip2/1.0.8", transitive_libs=True)
         self.requires(
-            "abseil/20250814.0", transitive_headers=True, transitive_libs=True
+            "abseil/20260107.1", transitive_headers=True, transitive_libs=True
         )
-        self.requires("protobuf/6.32.1", transitive_headers=True, transitive_libs=True)
+        self.requires("protobuf/6.33.5", transitive_headers=True, transitive_libs=True)
         self.requires("eigen/5.0.1", transitive_headers=True)
         self.requires("re2/20251105", transitive_libs=True)
 
     def build_requirements(self):
-        self.tool_requires("protobuf/6.32.1")
+        self.tool_requires("protobuf/6.33.5")
 
     def validate(self):
         check_min_cppstd(self, 17)
