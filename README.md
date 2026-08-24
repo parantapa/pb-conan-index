@@ -13,6 +13,7 @@ so conan can consume it directly as a local recipes index remote.
 
 | Package | Version | Upstream |
 | --- | --- | --- |
+| `clingo` | `5.8.2.pci` | <https://github.com/potassco/clingo> |
 | `gurobi` | `13.0.0.pci` | <https://www.gurobi.com> |
 | `ortools` | `9.15.pci` | <https://github.com/google/or-tools> |
 | `random123` | `1.14.0.pci` | <https://github.com/DEShawResearch/random123> |
@@ -38,6 +39,13 @@ It builds the BOP, GLOP, PDLP and MathOpt solvers,
 leaves COIN-OR, GLPK, HiGHS, SCIP and CPLEX out,
 and does not build the flatzinc front end
 or the python, java and dotnet bindings.
+
+The `clingo` recipe packages the C and C++ library.
+Its `apps` option, off by default,
+additionally builds the clingo, gringo, clasp, reify and lpconvert
+executables into `bin`.
+The bundled clasp and potassco are built along with it,
+so the package pulls in no other recipe.
 
 ## Layout
 
@@ -96,5 +104,8 @@ and linked as `rapidcheck`, without a namespace,
 matching the target upstream exports.
 `z3` is found as `find_package(Z3)`
 and linked as `z3::libz3`.
+`clingo` is found as `find_package(Clingo)`
+and linked as `libclingo`, without a namespace,
+matching the target upstream exports.
 The other packages use the conan defaults,
 so `random123` is `find_package(random123)` and `random123::random123`.
