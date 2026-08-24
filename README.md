@@ -33,6 +33,12 @@ The `z3` recipe packages the C and C++ library only;
 the z3 executable and the python, java, dotnet, julia, ocaml
 and go bindings are not built.
 
+The `ortools` recipe packages the C++ library only.
+It builds the BOP, GLOP, PDLP and MathOpt solvers,
+leaves COIN-OR, GLPK, HiGHS, SCIP and CPLEX out,
+and does not build the flatzinc front end
+or the python, java and dotnet bindings.
+
 ## Layout
 
 Each package lives under `recipes/<package>`:
