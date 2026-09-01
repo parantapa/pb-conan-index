@@ -15,6 +15,7 @@ so conan can consume it directly as a local recipes index remote.
 | --- | --- | --- |
 | `clingo` | `5.8.2.pci` | <https://github.com/potassco/clingo> |
 | `gurobi` | `13.0.0.pci` | <https://www.gurobi.com> |
+| `hdf5_plugins` | `2.2.0.pci` | <https://github.com/HDFGroup/hdf5_plugins> |
 | `ortools` | `9.15.pci` | <https://github.com/google/or-tools> |
 | `random123` | `1.14.0.pci` | <https://github.com/DEShawResearch/random123> |
 | `rapidcheck` | `20260806.pci` | <https://github.com/emil-e/rapidcheck> |
@@ -46,6 +47,25 @@ additionally builds the clingo, gringo, clasp, reify and lpconvert
 executables into `bin`.
 The bundled clasp and potassco are built along with it,
 so the package pulls in no other recipe.
+
+The `hdf5_plugins` recipe packages the compression filters
+that hdf5 loads at run time.
+It builds the bitgroom, bitround, blosc, blosc2, bshuf, bzip2,
+granular_bitround, jpeg, lz4, lzf, zfp and zstd filters,
+each behind an option of its own that is on by default.
+Every filter takes its compression library
+from the source the release tarball bundles
+and links it in statically,
+so the package needs no recipe other than `hdf5`.
+
+A filter is loaded into a process that already runs hdf5,
+so the linkage of that hdf5 reaches into the filters themselves.
+Against a shared hdf5 they link it as well.
+Against a static one they are built with the hdf5 symbols left undefined
+and resolve them against the program that loads them,
+which only works if that program exports its own symbols;
+the recipe asks for that through a link flag,
+so a consumer needs no change of its own.
 
 ## Layout
 
@@ -109,3 +129,8 @@ and linked as `libclingo`, without a namespace,
 matching the target upstream exports.
 The other packages use the conan defaults,
 so `random123` is `find_package(random123)` and `random123::random123`.
+
+`hdf5_plugins` has no cmake target and nothing to link against.
+It adds its plugin directory to `HDF5_PLUGIN_PATH` instead,
+so hdf5 finds the filters
+as soon as a `VirtualRunEnv` or `VirtualBuildEnv` environment is active.

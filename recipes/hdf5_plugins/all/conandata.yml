@@ -1,0 +1,4 @@
+sources:
+  "2.2.0.pci":
+    url: "https://github.com/HDFGroup/hdf5_plugins/releases/download/2.2.0/hdf5_plugins-2.2.0.tar.gz"
+    sha256: "2c3fe87e81a6750a0f70e6876f0b58a148780b0cab03390777e1926900441d11"
