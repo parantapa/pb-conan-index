@@ -19,6 +19,7 @@ so conan can consume it directly as a local recipes index remote.
 | `ortools` | `9.15.pci` | <https://github.com/google/or-tools> |
 | `random123` | `1.14.0.pci` | <https://github.com/DEShawResearch/random123> |
 | `rapidcheck` | `20260806.pci` | <https://github.com/emil-e/rapidcheck> |
+| `stan_math` | `5.3.0.pci` | <https://github.com/stan-dev/math> |
 | `taskflow` | `4.1.0.pci` | <https://github.com/taskflow/taskflow> |
 | `z3` | `5.1.0.pci` | <https://github.com/Z3Prover/z3> |
 | `zpp_bits` | `4.7.6.pci` | <https://github.com/eyalz800/zpp_bits> |
@@ -66,6 +67,46 @@ and resolve them against the program that loads them,
 which only works if that program exports its own symbols;
 the recipe asks for that through a link flag,
 so a consumer needs no change of its own.
+
+The `stan_math` recipe packages the headers only.
+The release vendors boost 1.87.0, eigen 3.4.0, sundials 6.1.1 and tbb 2020.3
+under `lib/` and builds against those;
+this recipe drops the vendored copies
+and requires `boost`, `eigen`, `sundials` and `onetbb` from conancenter instead.
+All four are the newest conancenter has, except `eigen`.
+
+`eigen` is held at the 3.4 series.
+Stan Math injects a plugin into Eigen's `MatrixBase` and `ArrayBase`
+and reaches into Eigen internals from it.
+`eigen/5.0.1` does not compile that plugin,
+having dropped `EIGEN_EMPTY_STRUCT_CTOR`,
+and a build that defines the macro back into place segfaults at run time.
+
+`boost` is required as `header_only`,
+since the only compiled boost library Stan Math reaches for
+is the MPI backend of `map_rect`, which is behind `STAN_MPI`.
+Set `boost/*:header_only=False` if something else in the graph needs the
+compiled libraries.
+
+`sundials` is the current `7.5.0`,
+which needs two small patches the recipe applies to the Stan Math headers.
+Stan Math targets the sundials 6.1 headers,
+where `sundials/sundials_context.h` declares the C++ `sundials::Context`
+wrapper and `sundials/sundials_types.h` still exports `realtype`.
+sundials 7 moved those into `sundials_context.hpp`
+and `sundials_types_deprecated.h`,
+so the recipe pulls both in alongside the header Stan Math asks for.
+The cvodes, cvodes adjoint, idas and kinsol solvers were checked
+against gradients and closed form solutions after the patch.
+
+The recipe exports `TBB_INTERFACE_NEW`,
+which `init_threadpool_tbb.hpp` would otherwise decide for itself
+by reading `TBB_VERSION_MAJOR` out of `tbb/tbb_stddef.h`,
+a header oneTBB 2021 removed.
+It also exports `_REENTRANT` and `BOOST_DISABLE_ASSERTS`,
+matching what the upstream makefile compiles with.
+`STAN_THREADS`, `STAN_MPI` and `STAN_OPENCL` are left to the consumer;
+the headers are the same either way.
 
 ## Layout
 
