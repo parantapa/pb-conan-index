@@ -16,6 +16,7 @@ so conan can consume it directly as a local recipes index remote.
 | `clingo` | `5.8.2.pci` | <https://github.com/potassco/clingo> |
 | `gurobi` | `13.0.0.pci` | <https://www.gurobi.com> |
 | `hdf5_plugins` | `2.2.0.pci` | <https://github.com/HDFGroup/hdf5_plugins> |
+| `libtorch` | `2.14.0.pci` | <https://github.com/pytorch/pytorch> |
 | `ortools` | `9.15.pci` | <https://github.com/google/or-tools> |
 | `random123` | `1.14.0.pci` | <https://github.com/DEShawResearch/random123> |
 | `rapidcheck` | `20260806.pci` | <https://github.com/emil-e/rapidcheck> |
@@ -108,6 +109,117 @@ matching what the upstream makefile compiles with.
 `STAN_THREADS`, `STAN_MPI` and `STAN_OPENCL` are left to the consumer;
 the headers are the same either way.
 
+The `libtorch` recipe packages the C++ API of PyTorch,
+CPU only unless `with_cuda` is set.
+By default it builds `libtorch`, `libtorch_cpu` and `libc10`
+and nothing else:
+no ROCm, XPU, MPS, Vulkan or Metal,
+and no distributed support,
+so gloo, tensorpipe, NCCL, MPI and UCC are all out.
+
+`with_cuda`, off by default and Linux only,
+turns on CUDA and cuDNN,
+and adds `libtorch_cuda` and `libc10_cuda` to the package.
+Both are taken from the build machine the way MKL is,
+a system dependency conan neither provides nor records,
+so the same ones have to be present wherever the package is consumed.
+
+The other optional CUDA libraries stay off.
+cuSPARSELt backs the cuSPARSELt half of 2:4 semi structured sparsity,
+which the vendored cutlass kernels implement as well;
+cuDSS backs `torch.sparse.spsolve` and nothing else;
+and MAGMA is a linear algebra backend
+that cuSOLVER has taken over from
+and that upstream has deprecated.
+cuFile is off too,
+as are the flash attention and memory efficient attention kernels
+and MSLK, which PyTorch turns on by itself
+for a CUDA build that targets SM100a;
+each of those three vendors a source tree of its own.
+
+`with_mkldnn`, off by default,
+builds the vendored oneDNN and routes the ATen kernels that have
+an oneDNN implementation, convolution and matmul among them, through it.
+The library is built from `third_party/ideep/mkl-dnn`;
+there is no `USE_SYSTEM_MKLDNN` in PyTorch's build,
+so a system oneDNN cannot be substituted without patching `FindMKLDNN.cmake`.
+
+The other optional CPU kernel libraries are off:
+FBGEMM, NNPACK, QNNPACK, XNNPACK, KleidiAI and mimalloc.
+Each one is a vendored source tree of its own,
+and together they are most of what makes a stock PyTorch build slow;
+leaving them out cuts the build to about 1560 objects.
+The kineto profiler, ITT, NUMA, numpy, gflags and glog are off too,
+as are the python bindings, the test binaries,
+the lite interpreter and the lazy TorchScript backend.
+What remains is ATen, autograd, the JIT and the C++ frontend.
+
+BLAS, LAPACK and the FFT backend come from the MKL
+installed on the build machine.
+`BLAS=MKL` is named explicitly rather than left to the default,
+which makes `FindMKL` run under `find_package(MKL REQUIRED)`,
+so a machine without MKL fails at configure time
+instead of quietly falling back to eigen for BLAS.
+This is a system dependency conan neither provides nor records:
+the packaged `libtorch_cpu` carries a `DT_NEEDED` on `libmkl_intel_lp64`,
+`libmkl_gnu_thread` and `libmkl_core`,
+and the same MKL has to be present wherever the package is consumed.
+Note that MKL here is BLAS, LAPACK and FFT only;
+MKLDNN, the oneDNN kernel library, is a separate vendored tree
+and stays off.
+
+`eigen` is the `5.0.1` that `third_party/eigen_pin.txt` pins;
+left to itself PyTorch git clones eigen from gitlab while it configures.
+
+The source is a shallow clone of the tag rather than a release archive,
+because the archive ships the `third_party` folders empty
+and the submodule commits are only recorded in the repository.
+`source()` clones `v2.14.0` one commit deep,
+then checks out by hand the fifteen submodules
+this configuration compiles or includes against.
+One of the fifteen is there for `with_mkldnn`:
+ideep, the wrapper ATen includes,
+which carries oneDNN itself as a submodule of its own under `mkl-dnn`,
+so that one is checked out recursively.
+Three more are there for `with_cuda`:
+cutlass, which is on the ATen CUDA include path
+whether or not the attention kernels that vendor it are built,
+cudnn_frontend, the cuDNN API `torch::cudnn` includes,
+and NVTX, whose nvtx3 headers the CUDA build looks for
+before it falls back to the nvToolsExt library CUDA 12 no longer ships.
+`source()` cannot read options,
+so all four are fetched whatever those two are set to.
+Four of the fourteen are headers only:
+nlohmann, cpp-httplib, psimd and kineto.
+kineto is checked out even though `USE_KINETO` is off, because
+`caffe2/CMakeLists.txt` puts `libkineto/include` on the `torch_cpu`
+include path whether or not the flag is set,
+and `kineto_shim.h` includes `ActivityType.h` from it unconditionally.
+pocketfft is not among them:
+it is the FFT backend for builds without MKL,
+and `Dependencies.cmake` skips it once `AT_MKL_ENABLED` is set.
+The remaining 22 submodules are the ones the disabled features would have
+used, composable_kernel, flash-attention, XNNPACK, fbgemm,
+gloo and tensorpipe among them, and are never cloned.
+
+`cmake/PreBuildSteps.cmake` checks that every path in `.gitmodules`
+is populated before any option is read,
+whatever the build is going to use,
+so the recipe patches that check out
+rather than clone 37 submodules to satisfy it.
+
+PyTorch 2.14 pins `CMAKE_CXX_STANDARD` to 20,
+and `torch/all.h` and `ATen/ATen.h` refuse to be included
+by anything compiling below it,
+so the profile has to ask for `compiler.cppstd=20` or later.
+`validate` rejects anything lower rather than build a package
+no consumer on that profile could include.
+
+Building needs a python interpreter on `PATH`
+with `pyyaml` and `typing_extensions` installed;
+torchgen generates the ATen operator and autograd sources during the build.
+`validate_build` says so before anything is compiled.
+
 ## Layout
 
 Each package lives under `recipes/<package>`:
@@ -168,6 +280,18 @@ and linked as `z3::libz3`.
 `clingo` is found as `find_package(Clingo)`
 and linked as `libclingo`, without a namespace,
 matching the target upstream exports.
+`libtorch` is found as `find_package(Torch)`
+and linked as `torch`, without a namespace,
+matching the target upstream exports.
+The target force links `libtorch.so` with `-Wl,--no-as-needed`.
+That library is a shim with no code of its own,
+so the linker default of `--as-needed` drops it,
+and with it everything reachable only through it.
+What that costs is the registration that runs from static initializers:
+`torch::cuda::is_available()` answers false
+on a machine with a working GPU
+once `libtorch_cuda.so` has been dropped.
+Upstream force links it the same way.
 The other packages use the conan defaults,
 so `random123` is `find_package(random123)` and `random123::random123`.
 

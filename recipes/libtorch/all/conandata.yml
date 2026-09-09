@@ -1,0 +1,4 @@
+sources:
+  "2.14.0.pci":
+    url: "https://github.com/pytorch/pytorch.git"
+    tag: "v2.14.0"
