@@ -60,8 +60,8 @@ class ClingoRecipe(ConanFile):
 
         # clingo hides all symbols when it builds a shared libclingo and
         # expects the bundled clasp and potassco to be static and absorbed
-        # into it. Letting BUILD_SHARED_LIBS turn those into shared libraries
-        # too leaves libclingo with unresolved clasp symbols.
+        # into it. With BUILD_SHARED_LIBS on, those become shared libraries
+        # too, and libclingo keeps unresolved clasp symbols.
         tc.cache_variables["BUILD_SHARED_LIBS"] = False
 
         tc.variables["CLINGO_INSTALL_LIB"] = True
@@ -108,8 +108,8 @@ class ClingoRecipe(ConanFile):
         )
 
         if self.options.shared:
-            # clasp and potassco are exported only so that the cmake config
-            # clingo installs can be generated.
+            # clasp and potassco are exported only so that cmake can
+            # generate the config clingo installs.
             # A shared libclingo already contains them.
             rm(self, "*.a", os.path.join(self.package_folder, "lib"))
 
@@ -118,7 +118,7 @@ class ClingoRecipe(ConanFile):
             self.cpp_info.libs = ["clingo"]
         else:
             # A static build keeps the bundled grounder and solver
-            # in libraries of their own, so they have to be linked as well.
+            # in libraries of their own, so a consumer links them as well.
             # The order follows the upstream link interface:
             # clingo needs gringo and clasp,
             # gringo needs reify and potassco, and clasp needs potassco.

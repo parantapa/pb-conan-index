@@ -32,9 +32,9 @@ class ORToolsRecipe(ConanFile):
     }
     # or-tools registers its solvers through static initializers,
     # which a linker drops from a static archive because nothing refers to them.
-    # A static build therefore loses GLOP and MathOpt at run time
-    # unless every consumer links the whole archive,
-    # so this recipe follows the upstream unix default and builds shared.
+    # A static build therefore loses GLOP and MathOpt at run time,
+    # unless every consumer links the whole archive.
+    # This recipe follows the upstream Unix default and builds shared.
     default_options = {"shared": True, "fPIC": True}
 
     # The public headers re-export abseil types whose layout depends on the
@@ -65,7 +65,7 @@ class ORToolsRecipe(ConanFile):
 
     @property
     def _cppstd(self):
-        # or-tools hardcodes the C++ standard, so the recipe has to know which
+        # or-tools hardcodes the C++ standard, so the recipe must know which
         # one the profile asked for. With no cppstd in the profile the compiler
         # default applies, which upstream assumes to be C++17 at the least.
         cppstd = self.settings.get_safe("compiler.cppstd")
@@ -76,9 +76,9 @@ class ORToolsRecipe(ConanFile):
     def _patch_sources(self):
         # or-tools pins CXX_STANDARD to 17 (20 on MSVC) after project(),
         # which overrides the standard the conan toolchain sets.
-        # Its abseil dependency is packaged per standard
-        # and its headers only compile under the standard it was built with,
-        # so leaving the pin in place breaks every profile above C++17.
+        # Its abseil dependency is packaged per standard,
+        # and its headers only compile under the standard it was built with.
+        # The pin therefore breaks every profile above C++17.
         replacements = [
             (os.path.join(self.source_folder, "CMakeLists.txt"), True),
             (os.path.join(self.source_folder, "cmake", "cpp.cmake"), True),
@@ -116,14 +116,14 @@ class ORToolsRecipe(ConanFile):
         tc.variables["BUILD_EXAMPLES"] = False
         tc.variables["BUILD_TESTING"] = False
 
-        # The flatzinc front end is a MiniZinc command line tool,
+        # The flatzinc front end is a MiniZinc command-line tool,
         # not part of the library this recipe packages.
-        # It also pins its own C++ standard, which _patch_sources does not fix
-        # so building it would fail against a C++20 abseil.
+        # It also pins its own C++ standard, which _patch_sources does not fix,
+        # so it fails to build against a C++20 abseil.
         tc.variables["BUILD_FLATZINC"] = False
 
-        # GNUInstallDirs picks lib64 on 64 bit non-Debian Linux,
-        # which would put the library outside the directories
+        # GNUInstallDirs picks lib64 on 64-bit non-Debian Linux,
+        # and that puts the library outside the directories
         # this recipe reports to consumers.
         tc.cache_variables["CMAKE_INSTALL_LIBDIR"] = "lib"
 
@@ -170,7 +170,7 @@ class ORToolsRecipe(ConanFile):
         # or-tools compiles itself with -fwrapv and exports it to consumers,
         # since its inline code relies on signed overflow wrapping.
         # The -Wno-range-loop-construct and -Wno-sign-compare that upstream
-        # exports alongside it are left out on purpose;
-        # they would silence those warnings in consumer code too.
+        # exports alongside it are left out on purpose.
+        # They silence those warnings in consumer code too.
         if not is_msvc(self):
             self.cpp_info.cxxflags = ["-fwrapv"]

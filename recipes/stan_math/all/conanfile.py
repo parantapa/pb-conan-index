@@ -30,8 +30,8 @@ class StanMathRecipe(ConanFile):
     # Stan Math needs headers only from boost:
     # its math, random, numeric/odeint, lexical_cast and optional components.
     # The one place it reaches for a compiled boost library
-    # is the MPI backend of map_rect,
-    # which is guarded by STAN_MPI and not built by this recipe.
+    # is the MPI backend of map_rect.
+    # STAN_MPI guards that backend, and this recipe does not build it.
     default_options = {"boost/*:header_only": True}
 
     def requirements(self):
@@ -43,10 +43,11 @@ class StanMathRecipe(ConanFile):
 
         # Eigen is pinned to the 3.4 series on purpose.
         # Stan Math 5.3.0 injects its own plugin into Eigen's MatrixBase and
-        # ArrayBase and reaches into Eigen internals from there,
-        # and eigen 5 both fails to compile that plugin,
-        # having dropped EIGEN_EMPTY_STRUCT_CTOR,
-        # and crashes at run time once the plugin is made to compile.
+        # ArrayBase, and reaches into Eigen internals from there.
+        # eigen 5 dropped EIGEN_EMPTY_STRUCT_CTOR,
+        # so it fails to compile that plugin.
+        # It also crashes at run time
+        # once the macro is defined back into place.
         self.requires("eigen/3.4.1", transitive_headers=True)
 
         self.requires("sundials/7.5.0", transitive_headers=True, transitive_libs=True)
@@ -67,14 +68,14 @@ class StanMathRecipe(ConanFile):
     )
 
     def _patch_sources(self):
-        # Stan Math 5.3.0 targets the sundials 6.1 headers, where
-        # sundials/sundials_context.h declares both the C interface and the
-        # C++ sundials::Context wrapper, and where sundials/sundials_types.h
-        # still exports the pre 6.0 realtype spelling.
-        # sundials 7 split the wrapper out into sundials_context.hpp
-        # and moved realtype into sundials_types_deprecated.h,
-        # so pulling those two headers in alongside the one Stan Math asks for
-        # is enough to build against it.
+        # Stan Math 5.3.0 targets the sundials 6.1 headers.
+        # There sundials/sundials_context.h declares both the C interface and
+        # the C++ sundials::Context wrapper, and sundials/sundials_types.h
+        # still exports the pre-6.0 realtype spelling.
+        # sundials 7 split the wrapper out into sundials_context.hpp,
+        # and moved realtype into sundials_types_deprecated.h.
+        # The recipe pulls those two headers in alongside the one
+        # Stan Math asks for, which is enough to build against it.
         for name in self._sundials_users:
             replace_in_file(
                 self,
@@ -119,10 +120,10 @@ class StanMathRecipe(ConanFile):
         # init_threadpool_tbb.hpp picks its threadpool interface by including
         # tbb/tbb_stddef.h and reading TBB_VERSION_MAJOR from it.
         # oneTBB 2021 removed that header,
-        # so the choice has to be made for it here.
+        # so this recipe makes the choice instead.
         self.cpp_info.defines = ["TBB_INTERFACE_NEW"]
 
-        # Both of these come from the upstream build.
+        # Both of these defines come from the upstream build.
         # _REENTRANT exposes the reentrant lgamma_r through cmath,
         # which Stan Math calls,
         # and BOOST_DISABLE_ASSERTS is what upstream compiles boost with.

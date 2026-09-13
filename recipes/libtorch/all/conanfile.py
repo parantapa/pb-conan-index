@@ -87,6 +87,10 @@ class LibTorchRecipe(ConanFile):
                 f"pip install {' '.join(missing)}"
             )
 
+    # The submodules this configuration compiles or includes against.
+    # The release archive ships third_party empty,
+    # and the repository alone records the submodule commits,
+    # so source() checks these out by hand.
     _submodules = (
         "third_party/FP16",
         "third_party/cpp-httplib",
@@ -101,6 +105,13 @@ class LibTorchRecipe(ConanFile):
         "third_party/sleef",
     )
 
+    # The submodules with_cuda needs.
+    # cutlass is on the ATen CUDA include path,
+    # whether or not the build compiles the attention kernels that vendor it.
+    # cudnn_frontend is the cuDNN API torch::cudnn includes.
+    # NVTX carries the nvtx3 headers the CUDA build looks for,
+    # before it falls back to the nvToolsExt library CUDA 12 no longer ships.
+    # source() cannot read options, so it fetches these either way.
     _cuda_submodules = (
         "third_party/NVTX",
         "third_party/cudnn_frontend",
@@ -109,9 +120,9 @@ class LibTorchRecipe(ConanFile):
 
     # The submodule with_mkldnn needs.
     # ideep is the wrapper ATen includes,
-    # and it carries oneDNN itself as a submodule of its own
-    # under mkl-dnn, which is where FindMKLDNN.cmake looks for it,
-    # so this one is checked out recursively.
+    # and it carries oneDNN itself as a submodule of its own under mkl-dnn.
+    # FindMKLDNN.cmake looks for oneDNN there,
+    # so source() checks this one out recursively.
     # source() cannot read options here either.
     _mkldnn_submodules = ("third_party/ideep",)
 
@@ -225,13 +236,19 @@ class LibTorchRecipe(ConanFile):
 
         tc.cache_variables["USE_OPENMP"] = bool(self.options.with_openmp)
 
+        # MKL is named explicitly rather than left to the default.
+        # FindMKL then runs under find_package(MKL REQUIRED),
+        # so a machine without MKL fails at configure time
+        # instead of falling back to eigen for BLAS.
         tc.cache_variables["BLAS"] = "MKL"
         tc.cache_variables["USE_STATIC_MKL"] = False
 
+        # Left to itself the build git clones eigen from gitlab
+        # while it configures.
         tc.cache_variables["USE_SYSTEM_EIGEN_INSTALL"] = True
 
-        # GNUInstallDirs picks lib64 on 64 bit non-Debian Linux,
-        # which would put the libraries outside the directories
+        # GNUInstallDirs picks lib64 on 64-bit non-Debian Linux,
+        # and that puts the libraries outside the directories
         # this recipe reports to consumers.
         tc.cache_variables["CMAKE_INSTALL_LIBDIR"] = "lib"
 
@@ -277,7 +294,7 @@ class LibTorchRecipe(ConanFile):
         rmdir(self, os.path.join(self.package_folder, "lib", "cmake"))
 
         # The install tree carries the cmake package files of the vendored
-        # dependencies next to torch's own; conan generates its own.
+        # dependencies next to torch's own. Conan generates its own.
         rename(
             self,
             os.path.join(self.package_folder, "share", "cmake"),
@@ -304,14 +321,15 @@ class LibTorchRecipe(ConanFile):
         if self.settings.os in ["Linux", "FreeBSD"]:
             self.cpp_info.system_libs = ["m", "dl", "pthread", "rt"]
 
-            # libtorch is a shim: it carries a DT_NEEDED on torch_cpu, c10
-            # and, with CUDA, on torch_cuda and c10_cuda, and no code of its
-            # own that a consumer would reference. The linker default of
-            # --as-needed therefore drops it, and everything reachable only
-            # through it goes with it. What that costs is the registration
-            # that runs from static initializers: with torch_cuda dropped the
-            # CUDA hooks are never installed and torch::cuda::is_available()
-            # answers false on a machine with a working GPU.
+            # libtorch is a shim with no code of its own
+            # that a consumer references. It carries a DT_NEEDED on
+            # torch_cpu and c10, and with CUDA on torch_cuda and c10_cuda.
+            # The linker default of --as-needed therefore drops it,
+            # and everything reachable only through it goes with it.
+            # What that costs is the registration that runs from static
+            # initializers. With torch_cuda dropped, the CUDA hooks are
+            # never installed, and torch::cuda::is_available() answers false
+            # on a machine with a working GPU.
             # Upstream hits this too and force links the same way,
             # in the torch target of its own Caffe2Targets.cmake.
             if self.options.shared:

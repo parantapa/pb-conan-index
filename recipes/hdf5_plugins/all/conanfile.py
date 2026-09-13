@@ -42,8 +42,8 @@ class HDF5PluginsRecipe(ConanFile):
 
     # Almost everything here is a loadable module rather than a library.
     # The one thing a consumer links against is the static library
-    # that carries the property list interface of the zfp filter,
-    # so this is what the package type describes.
+    # that carries the property list interface of the zfp filter.
+    # The package type describes that library.
     package_type = "static-library"
     settings = "os", "compiler", "build_type", "arch"
     options = {_filter: [True, False] for _filter in _filters}
@@ -54,8 +54,8 @@ class HDF5PluginsRecipe(ConanFile):
 
     def requirements(self):
         # The zfp filter installs headers that include hdf5.h,
-        # and a static library that calls into hdf5,
-        # so a consumer of either needs both from hdf5 as well.
+        # and a static library that calls into hdf5.
+        # A consumer of either needs both from hdf5 as well.
         self.requires("hdf5/1.14.6", transitive_headers=True, transitive_libs=True)
 
     def validate(self):
@@ -79,8 +79,8 @@ class HDF5PluginsRecipe(ConanFile):
         get(self, **self.conan_data["sources"][self.version], strip_root=True)
 
         # Every path in the release tarball starts with a "./" component,
-        # and that is the component strip_root takes off,
-        # so the archive still unpacks into a directory of its own.
+        # and that is the component strip_root takes off.
+        # The archive therefore still unpacks into a directory of its own.
         unpacked = os.path.join(
             self.source_folder, f"hdf5_plugins-{self._upstream_version}"
         )
@@ -102,9 +102,9 @@ class HDF5PluginsRecipe(ConanFile):
         # Upstream looks for an hdf5 installed by the HDF Group cmake build,
         # whose config file, components and targets
         # are not the ones conan generates.
-        # Defining H5PL_HDF5_HEADER takes the branch upstream uses
-        # when the plugins are built as part of a larger project:
-        # the search is skipped and the hdf5 target is taken as given.
+        # H5PL_HDF5_HEADER takes the branch upstream uses
+        # when the plugins are built as part of a larger project.
+        # The search is skipped, and the hdf5 target is taken as given.
         support = textwrap.dedent("""\
             find_package(HDF5 REQUIRED CONFIG)
             set(H5PL_HDF5_HEADER "h5pubconf.h")
@@ -115,10 +115,10 @@ class HDF5PluginsRecipe(ConanFile):
             support += "set(H5PL_HDF5_LINK_LIBS hdf5::hdf5)\n"
         else:
             # A filter is loaded into a process that already runs hdf5.
-            # Linking a static hdf5 into the filter
-            # would put a second copy of the library in that process,
-            # and a filter that calls back into hdf5 from its set_local
-            # callback then fails to recognise the caller's property list.
+            # A static hdf5 linked into the filter
+            # puts a second copy of the library in that process.
+            # A filter that calls back into hdf5 from its set_local
+            # callback then fails to recognize the caller's property list.
             # So the filters are given the hdf5 headers but no hdf5 to link,
             # and their hdf5 symbols are resolved from the loading process.
             support += textwrap.dedent("""\
@@ -163,8 +163,7 @@ class HDF5PluginsRecipe(ConanFile):
         tc.variables["H5PL_COMMUNITY"] = False
 
         # Conan packages the build, so the cpack setup is only overhead.
-        # Leaving it out also keeps INSTALL_SUPPORT
-        # from rewriting CMAKE_INSTALL_PREFIX.
+        # Without it, INSTALL_SUPPORT also leaves CMAKE_INSTALL_PREFIX alone.
         tc.variables["H5PL_CPACK_ENABLE"] = False
 
         tc.generate()
@@ -193,12 +192,12 @@ class HDF5PluginsRecipe(ConanFile):
 
         if self.options.zfp:
             # Besides the plugin, the zfp filter installs a static library
-            # holding the property list interface that H5Zzfp.h declares.
+            # that holds the property list interface H5Zzfp.h declares.
             # That library calls into the zfp codec,
             # which upstream builds through FetchContent
-            # and leaves out of the install,
-            # so the archive it was linked against is taken from the build
-            # and shipped next to it.
+            # and leaves out of the install.
+            # The recipe takes the archive it was linked against
+            # from the build, and ships it next to the library.
             copy(
                 self,
                 "*zfp.a",
@@ -224,8 +223,9 @@ class HDF5PluginsRecipe(ConanFile):
             # and need nothing to link against.
             # The functions of H5Zzfp_lib.h and H5Zzfp_props.h
             # register the filter with hdf5 directly instead,
-            # and live in h5zzfp,
-            # which in turn calls into the zfp codec it was built against.
+            # and live in h5zzfp.
+            # That library in turn calls into the zfp codec
+            # it was built against.
             self.cpp_info.libs = ["h5zzfp", "zfp"]
             self.cpp_info.libdirs = ["lib"]
             if self.settings.os in ["Linux", "FreeBSD"]:
@@ -238,16 +238,16 @@ class HDF5PluginsRecipe(ConanFile):
             self.cpp_info.includedirs = []
 
         if not self.dependencies["hdf5"].options.shared:
-            # Against a static hdf5 the filters carry no hdf5 of their own
-            # and look the symbols up in the process that loads them,
-            # which only finds them
+            # Against a static hdf5 the filters carry no hdf5 of their own,
+            # and look the symbols up in the process that loads them.
+            # The lookup only finds them
             # if the program put its own symbols in the dynamic symbol table.
             if self.settings.os == "Macos":
                 self.cpp_info.exelinkflags = ["-Wl,-export_dynamic"]
             elif self.settings.os in ["Linux", "FreeBSD"]:
                 self.cpp_info.exelinkflags = ["-rdynamic"]
 
-        # hdf5 searches this path, and then its build time default,
+        # hdf5 searches this path, and then its build-time default,
         # when it meets a filter it does not know.
         plugin_folder = os.path.join(self.package_folder, "lib", "plugin")
         self.runenv_info.append_path("HDF5_PLUGIN_PATH", plugin_folder)

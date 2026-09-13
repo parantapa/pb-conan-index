@@ -38,7 +38,7 @@ class Random123(ConanFile):
             dst=os.path.join(self.package_folder, "licenses"),
         )
 
-        # This will also copy the "include" folder
+        # This pattern also copies the "include" folder
         copy(self, "include/*.h", self.source_folder, self.package_folder)
         copy(self, "include/*.hpp", self.source_folder, self.package_folder)
 
