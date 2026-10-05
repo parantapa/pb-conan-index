@@ -2,15 +2,23 @@
 
 | Package | Version | Upstream |
 | --- | --- | --- |
+| `approxmc` | `4.3.4.pci` | <https://github.com/meelgroup/approxmc> |
+| `arjun` | `2.9.0.pci` | <https://github.com/meelgroup/arjun> |
+| `cadiback` | `20260912.pci` | <https://github.com/meelgroup/cadiback> |
+| `cadical` | `20260912.pci` | <https://github.com/meelgroup/cadical> |
 | `clingo` | `5.8.2.pci` | <https://github.com/potassco/clingo> |
+| `cryptominisat5` | `5.16.0.pci` | <https://github.com/msoos/cryptominisat> |
+| `ganak` | `2.7.0.pci` | <https://github.com/meelgroup/ganak> |
 | `gurobi` | `13.0.0.pci` | <https://www.gurobi.com> |
 | `hdf5_plugins` | `2.2.0.pci` | <https://github.com/HDFGroup/hdf5_plugins> |
 | `libtorch` | `2.14.0.pci` | <https://github.com/pytorch/pytorch> |
 | `ortools` | `9.15.pci` | <https://github.com/google/or-tools> |
 | `random123` | `1.14.0.pci` | <https://github.com/DEShawResearch/random123> |
 | `rapidcheck` | `20260806.pci` | <https://github.com/emil-e/rapidcheck> |
+| `sbva` | `20260912.pci` | <https://github.com/meelgroup/sbva> |
 | `stan_math` | `5.3.0.pci` | <https://github.com/stan-dev/math> |
 | `taskflow` | `4.1.0.pci` | <https://github.com/taskflow/taskflow> |
+| `treedecomp` | `20260921.pci` | <https://github.com/meelgroup/treedecomp> |
 | `z3` | `5.1.0.pci` | <https://github.com/Z3Prover/z3> |
 | `zpp_bits` | `4.7.6.pci` | <https://github.com/eyalz800/zpp_bits> |
 
@@ -19,8 +27,10 @@ It marks the recipe as packaged by this index,
 and keeps it apart from a recipe of the same name and version elsewhere.
 For example, conancenter ships its own `taskflow` and `zpp_bits`.
 
-`rapidcheck` has no upstream releases,
-so its version is the date of the git revision the recipe pins.
+`rapidcheck`, `cadical`, `cadiback` and `treedecomp` have no upstream releases,
+so each version is the date of the git revision the recipe pins.
+`sbva` pins a revision after its last release, 1.2.1,
+and takes the date of that revision as well.
 
 ## What each recipe packages
 
@@ -32,6 +42,35 @@ additionally builds the clingo, gringo, clasp, reify and lpconvert
 executables into `bin`.
 The bundled clasp and potassco are built along with it,
 so the package pulls in no other recipe.
+
+### The ganak family
+
+`ganak` is a model counter.
+It uses seven libraries, and the index packages each one as a recipe:
+`cadical`, `cadiback`, `cryptominisat5`, `sbva`, `treedecomp`, `arjun` and `approxmc`.
+Each recipe pins the revision that the `flake.lock` of ganak 2.7.0 names.
+The revisions of `cryptominisat5`, `arjun` and `approxmc` are the release tags
+that match their versions.
+
+Every recipe in the family packages a library, static by default.
+Except for `cadical` and `cadiback`,
+each recipe also packages the executables that upstream installs.
+The family takes `gmp`, `mpfr`, `flint` and `zlib` from conancenter.
+Every recipe in it needs `compiler.cppstd=17` or later.
+`cryptominisat5`, `treedecomp`, `arjun`, `approxmc` and `ganak`
+need `compiler.cppstd=20` or later.
+
+The `cryptominisat5` package also holds `liboracle`,
+a second library that upstream installs with its header under `include/oracle`.
+`sbva` builds against the eigen 3.4.0 that upstream vendors.
+No installed header includes eigen.
+
+The `ganak` package holds the `ganak` library and four executables:
+`ganak`, `ddnnf-cleanup`, `ddnnf2dot` and `ddnnf-verify`.
+Its headers sit under `include/ganak`,
+so a consumer includes `<ganak/ganak.hpp>`.
+`flint` 3.0.1 asks for `mpfr/4.2.1`,
+and `ganak` forces `mpfr/4.2.2` to match `arjun` and `approxmc`.
 
 ### gurobi
 
@@ -197,8 +236,16 @@ which matches the target upstream exports.
 `libtorch` is found as `find_package(Torch)`
 and linked as `torch`, without a namespace,
 which matches the target upstream exports.
-The other packages use the conan defaults,
+The other packages outside the ganak family use the conan defaults,
 so `random123` is `find_package(random123)` and `random123::random123`.
+
+Each recipe of the ganak family is found under its own name,
+as in `find_package(ganak)`.
+Its target carries the same name with no namespace,
+which matches the target upstream exports.
+The `cryptominisat5` package exports two targets,
+`cryptominisat5` and `oracle`,
+and the conan target `cryptominisat5::cryptominisat5` links both.
 
 `hdf5_plugins` sets no cmake target name of its own.
 With the `zfp` option on, it packages the `h5zzfp` static library

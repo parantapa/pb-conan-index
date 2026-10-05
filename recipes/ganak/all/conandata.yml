@@ -1,0 +1,4 @@
+sources:
+  "2.7.0.pci":
+    url: "https://github.com/meelgroup/ganak/archive/refs/tags/release/v2.7.0.tar.gz"
+    sha256: "7c9e84fe17b00739048596db408062437cfde94492b708794537943f1e142561"

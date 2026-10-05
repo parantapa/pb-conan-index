@@ -1,0 +1,4 @@
+sources:
+  "20260912.pci":
+    url: "https://github.com/meelgroup/cadical/archive/818c9562f114b315a9246ced943b66b60b38e8fb.tar.gz"
+    sha256: "beaeb17a751db88d5384b35d65be82501d94cf60f758b768b59bfb2b437cb34b"

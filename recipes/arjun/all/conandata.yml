@@ -1,0 +1,4 @@
+sources:
+  "2.9.0.pci":
+    url: "https://github.com/meelgroup/arjun/archive/refs/tags/release/v2.9.0.tar.gz"
+    sha256: "f2916324e20c9ca2b43ca540576422a63e5d7855ec4fb3a16ec5c4ce045a3825"

@@ -1,0 +1,4 @@
+sources:
+  "4.3.4.pci":
+    url: "https://github.com/meelgroup/approxmc/archive/refs/tags/release/v4.3.4.tar.gz"
+    sha256: "a98cc71c66dc78231eea032821819a0c09f6eef013820071706e8172be8e6841"

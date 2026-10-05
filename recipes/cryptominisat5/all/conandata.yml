@@ -1,0 +1,4 @@
+sources:
+  "5.16.0.pci":
+    url: "https://github.com/msoos/cryptominisat/archive/refs/tags/release/v5.16.0.tar.gz"
+    sha256: "e3a02fe9a1a13ede75b6e52866ca2cc98032d134cd7ccaadabc07b9977df4908"
