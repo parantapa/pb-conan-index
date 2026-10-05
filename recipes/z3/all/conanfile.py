@@ -30,13 +30,13 @@ class Z3Recipe(ConanFile):
     }
     default_options = {"shared": False, "fPIC": True}
 
-    def source(self):
+    def source(self) -> None:
         get(self, **self.conan_data["sources"][self.version], strip_root=True)
 
-    def layout(self):
+    def layout(self) -> None:
         cmake_layout(self, src_folder="z3")
 
-    def generate(self):
+    def generate(self) -> None:
         tc = CMakeToolchain(self)
 
         # This recipe packages the C and C++ library only.
@@ -63,12 +63,12 @@ class Z3Recipe(ConanFile):
 
         tc.generate()
 
-    def build(self):
+    def build(self) -> None:
         cmake = CMake(self)
         cmake.configure()
         cmake.build()
 
-    def package(self):
+    def package(self) -> None:
         copy(
             self,
             "LICENSE.txt",
@@ -79,13 +79,14 @@ class Z3Recipe(ConanFile):
         cmake = CMake(self)
         cmake.install()
 
+        # See "The upstream cmake package files" in the developer notes.
         rename(
             self,
             os.path.join(self.package_folder, "lib", "cmake"),
             os.path.join(self.package_folder, "lib", "_orig_cmake"),
         )
 
-    def package_info(self):
+    def package_info(self) -> None:
         self.cpp_info.libs = ["z3"]
 
         if self.settings.os in ["Linux", "FreeBSD"]:

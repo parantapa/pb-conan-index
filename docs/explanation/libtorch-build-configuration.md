@@ -48,7 +48,7 @@ so it fetches all four whatever those two are set to.
 
 Four of the remaining eleven are headers only:
 nlohmann, cpp-httplib, psimd and kineto.
-kineto is checked out even though `USE_KINETO` is off.
+`source()` checks out kineto even though `USE_KINETO` is off.
 `caffe2/CMakeLists.txt` puts `libkineto/include` on the `torch_cpu`
 include path whether or not the flag is set,
 and `kineto_shim.h` includes `ActivityType.h` from it unconditionally.

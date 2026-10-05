@@ -52,13 +52,13 @@ class HDF5PluginsRecipe(ConanFile):
         **{"hdf5/*:shared": True},
     )
 
-    def requirements(self):
+    def requirements(self) -> None:
         # The zfp filter installs headers that include hdf5.h,
         # and a static library that calls into hdf5.
         # A consumer of either needs both from hdf5 as well.
         self.requires("hdf5/1.14.6", transitive_headers=True, transitive_libs=True)
 
-    def validate(self):
+    def validate(self) -> None:
         if (
             not self.dependencies["hdf5"].options.shared
             and self.settings.os == "Windows"
@@ -71,11 +71,11 @@ class HDF5PluginsRecipe(ConanFile):
             )
 
     @property
-    def _upstream_version(self):
+    def _upstream_version(self) -> str:
         # The version of this index carries a suffix that upstream does not.
         return self.version.removesuffix(".pci")
 
-    def source(self):
+    def source(self) -> None:
         get(self, **self.conan_data["sources"][self.version], strip_root=True)
 
         # Every path in the release tarball starts with a "./" component,
@@ -92,10 +92,10 @@ class HDF5PluginsRecipe(ConanFile):
             )
         os.rmdir(unpacked)
 
-    def layout(self):
+    def layout(self) -> None:
         cmake_layout(self, src_folder="hdf5_plugins")
 
-    def generate(self):
+    def generate(self) -> None:
         deps = CMakeDeps(self)
         deps.generate()
 
@@ -104,7 +104,7 @@ class HDF5PluginsRecipe(ConanFile):
         # are not the ones conan generates.
         # H5PL_HDF5_HEADER takes the branch upstream uses
         # when the plugins are built as part of a larger project.
-        # The search is skipped, and the hdf5 target is taken as given.
+        # Upstream then skips the search, and takes the hdf5 target as given.
         support = textwrap.dedent("""\
             find_package(HDF5 REQUIRED CONFIG)
             set(H5PL_HDF5_HEADER "h5pubconf.h")
@@ -114,13 +114,13 @@ class HDF5PluginsRecipe(ConanFile):
         if self.dependencies["hdf5"].options.shared:
             support += "set(H5PL_HDF5_LINK_LIBS hdf5::hdf5)\n"
         else:
-            # A filter is loaded into a process that already runs hdf5.
+            # hdf5 loads a filter into a process that already runs hdf5.
             # A static hdf5 linked into the filter
             # puts a second copy of the library in that process.
             # A filter that calls back into hdf5 from its set_local
             # callback then fails to recognize the caller's property list.
-            # So the filters are given the hdf5 headers but no hdf5 to link,
-            # and their hdf5 symbols are resolved from the loading process.
+            # So the recipe gives the filters the hdf5 headers but no hdf5 to link.
+            # The loading process then resolves their hdf5 symbols.
             support += textwrap.dedent("""\
                 add_library(h5pl_hdf5_headers INTERFACE)
                 target_include_directories(
@@ -168,12 +168,12 @@ class HDF5PluginsRecipe(ConanFile):
 
         tc.generate()
 
-    def build(self):
+    def build(self) -> None:
         cmake = CMake(self)
         cmake.configure()
         cmake.build()
 
-    def package(self):
+    def package(self) -> None:
         licenses = os.path.join(self.package_folder, "licenses")
         copy(self, "COPYING", src=self.source_folder, dst=licenses)
         copy(
@@ -196,8 +196,8 @@ class HDF5PluginsRecipe(ConanFile):
             # That library calls into the zfp codec,
             # which upstream builds through FetchContent
             # and leaves out of the install.
-            # The recipe takes the archive it was linked against
-            # from the build, and ships it next to the library.
+            # The recipe takes from the build the archive the library links against,
+            # and ships it next to the library.
             copy(
                 self,
                 "*zfp.a",
@@ -213,7 +213,7 @@ class HDF5PluginsRecipe(ConanFile):
                 keep_path=False,
             )
 
-    def package_info(self):
+    def package_info(self) -> None:
         self.cpp_info.bindirs = []
 
         if self.options.zfp:
@@ -231,7 +231,7 @@ class HDF5PluginsRecipe(ConanFile):
             if self.settings.os in ["Linux", "FreeBSD"]:
                 self.cpp_info.system_libs = ["m"]
         else:
-            # Every other filter is dlopened by hdf5,
+            # hdf5 dlopens every other filter,
             # so nothing is left for a consumer to link or include.
             self.cpp_info.libs = []
             self.cpp_info.libdirs = []
@@ -247,8 +247,8 @@ class HDF5PluginsRecipe(ConanFile):
             elif self.settings.os in ["Linux", "FreeBSD"]:
                 self.cpp_info.exelinkflags = ["-rdynamic"]
 
-        # hdf5 searches this path, and then its build-time default,
-        # when it meets a filter it does not know.
+        # When hdf5 meets a filter it does not know,
+        # it searches this path, and then its build-time default.
         plugin_folder = os.path.join(self.package_folder, "lib", "plugin")
         self.runenv_info.append_path("HDF5_PLUGIN_PATH", plugin_folder)
         self.buildenv_info.append_path("HDF5_PLUGIN_PATH", plugin_folder)

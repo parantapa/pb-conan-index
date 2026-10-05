@@ -34,7 +34,7 @@ class RapidCheckRecipe(ConanFile):
     }
     default_options = {"shared": False, "fPIC": True, "enable_rtti": True}
 
-    def source(self):
+    def source(self) -> None:
         # RapidCheck makes no releases, so every version pins a git revision.
         source = self.conan_data["sources"][self.version]
 
@@ -43,24 +43,24 @@ class RapidCheckRecipe(ConanFile):
         git.folder = "rapidcheck"
         git.checkout(commit=source["commit"])
 
-    def layout(self):
+    def layout(self) -> None:
         cmake_layout(self)
 
-    def generate(self):
+    def generate(self) -> None:
         tc = CMakeToolchain(self)
         tc.variables["RC_ENABLE_RTTI"] = bool(self.options.enable_rtti)
         tc.variables["RC_ENABLE_TESTS"] = False
         tc.variables["RC_ENABLE_EXAMPLES"] = False
         tc.generate()
 
-    def build(self):
+    def build(self) -> None:
         cmake = CMake(self)
         cmake.configure(
             build_script_folder=os.path.join(self.source_folder, "rapidcheck")
         )
         cmake.build()
 
-    def package(self):
+    def package(self) -> None:
         copy(
             self,
             "LICENSE.md",
@@ -71,13 +71,14 @@ class RapidCheckRecipe(ConanFile):
         cmake = CMake(self)
         cmake.install()
 
+        # See "The upstream cmake package files" in the developer notes.
         rename(
             self,
             os.path.join(self.package_folder, "share", "rapidcheck", "cmake"),
             os.path.join(self.package_folder, "share", "rapidcheck", "_orig_cmake"),
         )
 
-    def package_info(self):
+    def package_info(self) -> None:
         self.cpp_info.libs = ["rapidcheck"]
 
         if not self.options.enable_rtti:

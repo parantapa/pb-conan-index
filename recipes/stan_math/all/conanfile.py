@@ -34,26 +34,27 @@ class StanMathRecipe(ConanFile):
     # STAN_MPI guards that backend, and this recipe does not build it.
     default_options = {"boost/*:header_only": True}
 
-    def requirements(self):
+    def requirements(self) -> None:
         # Upstream vendors boost 1.87.0, eigen 3.4.0, sundials 6.1.1
         # and tbb 2020.3 under lib/ and builds against those.
         # This recipe drops the vendored copies
         # and takes the dependencies from conancenter instead.
         self.requires("boost/1.91.0", transitive_headers=True)
 
-        # Eigen is pinned to the 3.4 series on purpose.
-        # Stan Math 5.3.0 injects its own plugin into Eigen's MatrixBase and
-        # ArrayBase, and reaches into Eigen internals from there.
+        # The recipe pins Eigen to the 3.4 series on purpose.
+        # Stan Math 5.3.0 injects its own plugin
+        # into Eigen's MatrixBase and ArrayBase,
+        # and reaches into Eigen internals from there.
         # eigen 5 dropped EIGEN_EMPTY_STRUCT_CTOR,
         # so it fails to compile that plugin.
         # It also crashes at run time
-        # once the macro is defined back into place.
+        # once a build defines the macro back into place.
         self.requires("eigen/3.4.1", transitive_headers=True)
 
         self.requires("sundials/7.5.0", transitive_headers=True, transitive_libs=True)
         self.requires("onetbb/2023.1.0", transitive_headers=True, transitive_libs=True)
 
-    def validate(self):
+    def validate(self) -> None:
         check_min_cppstd(self, 17)
 
     # The reverse mode solvers that wrap cvodes, idas and kinsol.
@@ -67,11 +68,11 @@ class StanMathRecipe(ConanFile):
         "kinsol_solve.hpp",
     )
 
-    def _patch_sources(self):
+    def _patch_sources(self) -> None:
         # Stan Math 5.3.0 targets the sundials 6.1 headers.
-        # There sundials/sundials_context.h declares both the C interface and
-        # the C++ sundials::Context wrapper, and sundials/sundials_types.h
-        # still exports the pre-6.0 realtype spelling.
+        # There sundials/sundials_context.h declares both the C interface
+        # and the C++ sundials::Context wrapper,
+        # and sundials/sundials_types.h still exports the pre-6.0 realtype spelling.
         # sundials 7 split the wrapper out into sundials_context.hpp,
         # and moved realtype into sundials_types_deprecated.h.
         # The recipe pulls those two headers in alongside the one
@@ -88,14 +89,14 @@ class StanMathRecipe(ConanFile):
                 "#include <sundials/sundials_types_deprecated.h>",
             )
 
-    def source(self):
+    def source(self) -> None:
         get(self, **self.conan_data["sources"][self.version], strip_root=True)
         self._patch_sources()
 
-    def layout(self):
+    def layout(self) -> None:
         basic_layout(self, src_folder="math")
 
-    def package(self):
+    def package(self) -> None:
         copy(
             self,
             "LICENSE.md",
@@ -103,7 +104,7 @@ class StanMathRecipe(ConanFile):
             dst=os.path.join(self.package_folder, "licenses"),
         )
 
-        # Only stan/ is packaged.
+        # The recipe packages only stan/.
         # The lib/ folder of the release holds the vendored dependencies,
         # which the conan requirements replace.
         copy(
@@ -113,7 +114,7 @@ class StanMathRecipe(ConanFile):
             dst=os.path.join(self.package_folder, "include", "stan"),
         )
 
-    def package_info(self):
+    def package_info(self) -> None:
         self.cpp_info.bindirs = []
         self.cpp_info.libdirs = []
 

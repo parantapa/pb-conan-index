@@ -32,16 +32,16 @@ class ClingoRecipe(ConanFile):
     }
     default_options = {"shared": False, "fPIC": True, "apps": False}
 
-    def validate(self):
+    def validate(self) -> None:
         check_min_cppstd(self, 14)
 
-    def source(self):
+    def source(self) -> None:
         get(self, **self.conan_data["sources"][self.version], strip_root=True)
 
-    def layout(self):
+    def layout(self) -> None:
         cmake_layout(self, src_folder="clingo")
 
-    def generate(self):
+    def generate(self) -> None:
         tc = CMakeToolchain(self)
 
         tc.variables["CLINGO_BUILD_APPS"] = bool(self.options.apps)
@@ -58,10 +58,11 @@ class ClingoRecipe(ConanFile):
         tc.variables["CLINGO_BUILD_STATIC"] = False
         tc.variables["CLINGO_BUILD_SHARED"] = bool(self.options.shared)
 
-        # clingo hides all symbols when it builds a shared libclingo and
-        # expects the bundled clasp and potassco to be static and absorbed
-        # into it. With BUILD_SHARED_LIBS on, those become shared libraries
-        # too, and libclingo keeps unresolved clasp symbols.
+        # clingo hides all symbols when it builds a shared libclingo,
+        # and expects the bundled clasp and potassco
+        # to be static and absorbed into it.
+        # With BUILD_SHARED_LIBS on, those become shared libraries too,
+        # and libclingo keeps unresolved clasp symbols.
         tc.cache_variables["BUILD_SHARED_LIBS"] = False
 
         tc.variables["CLINGO_INSTALL_LIB"] = True
@@ -75,16 +76,17 @@ class ClingoRecipe(ConanFile):
         tc.cache_variables["CMAKE_DISABLE_FIND_PACKAGE_BISON"] = True
         tc.cache_variables["CMAKE_DISABLE_FIND_PACKAGE_RE2C"] = True
 
+        # See "The library directory" in the developer notes.
         tc.cache_variables["CMAKE_INSTALL_LIBDIR"] = "lib"
 
         tc.generate()
 
-    def build(self):
+    def build(self) -> None:
         cmake = CMake(self)
         cmake.configure()
         cmake.build()
 
-    def package(self):
+    def package(self) -> None:
         copy(
             self,
             "LICENSE.md",
@@ -101,6 +103,7 @@ class ClingoRecipe(ConanFile):
         cmake = CMake(self)
         cmake.install()
 
+        # See "The upstream cmake package files" in the developer notes.
         rename(
             self,
             os.path.join(self.package_folder, "lib", "cmake"),
@@ -108,12 +111,12 @@ class ClingoRecipe(ConanFile):
         )
 
         if self.options.shared:
-            # clasp and potassco are exported only so that cmake can
-            # generate the config clingo installs.
+            # clingo exports clasp and potassco only
+            # so that cmake can generate the config clingo installs.
             # A shared libclingo already contains them.
             rm(self, "*.a", os.path.join(self.package_folder, "lib"))
 
-    def package_info(self):
+    def package_info(self) -> None:
         if self.options.shared:
             self.cpp_info.libs = ["clingo"]
         else:

@@ -33,6 +33,22 @@ executables into `bin`.
 The bundled clasp and potassco are built along with it,
 so the package pulls in no other recipe.
 
+### gurobi
+
+The `gurobi` recipe packages the prebuilt linux64 distribution of Gurobi,
+and supports Linux on x86_64 only.
+`validate` rejects any other operating system or architecture.
+The package holds the headers,
+the shared library as `libgurobi130.so` and `libgurobi.so.13.0.0`,
+and the C++ wrapper `libgurobi_c++.a`.
+
+The wrapper is the one part built from source.
+Its build runs the makefile that the distribution ships.
+Where the profile sets `tools.build:compiler_executables`,
+the makefile uses the C++ compiler named there.
+The license of the package is proprietary,
+and the package carries the Gurobi EULA.
+
 ### hdf5_plugins
 
 The `hdf5_plugins` recipe packages the compression filters
@@ -94,7 +110,7 @@ The packaged `libtorch_cpu` carries a `DT_NEEDED` on `libmkl_intel_lp64`,
 so the same MKL must be present wherever the package is consumed.
 MKL here is BLAS, LAPACK and FFT only.
 MKLDNN, the oneDNN kernel library, is a separate vendored tree,
-and stays off.
+and stays off unless `with_mkldnn` is set.
 
 `eigen` is the `5.0.1` that `third_party/eigen_pin.txt` pins.
 Left to itself, PyTorch git clones eigen from gitlab while it configures.
@@ -121,6 +137,19 @@ and leaves COIN-OR, GLPK, HiGHS, SCIP and CPLEX out.
 The recipe does not build the flatzinc front end,
 or the python, java and dotnet bindings.
 
+### random123
+
+The `random123` recipe packages the headers only.
+It clones the upstream tag that matches the version,
+and has no `conandata.yml`.
+
+### rapidcheck
+
+The `rapidcheck` recipe packages the library, static by default.
+Its `enable_rtti` option is on by default.
+With the option off, the package defines `RC_DONT_USE_RTTI` for consumers.
+The tests and the examples are not built.
+
 ### stan_math
 
 The `stan_math` recipe packages the headers only.
@@ -133,16 +162,25 @@ All four are the newest conancenter has, except `eigen`.
 `boost` is required as `header_only`.
 The only compiled boost library Stan Math reaches for
 is the MPI backend of `map_rect`, which is behind `STAN_MPI`.
-If something else in the graph needs the compiled libraries,
-set `boost/*:header_only=False`.
+A graph where something else needs the compiled libraries
+takes them with `boost/*:header_only=False`.
 
 See [The Stan Math dependencies](../explanation/stan-math-dependencies.md).
+
+### taskflow
+
+The `taskflow` recipe packages the headers only.
+On Linux and FreeBSD, consumers also link `pthread`.
 
 ### z3
 
 The `z3` recipe packages the C and C++ library only.
 The z3 executable is not built,
 and neither are the python, java, dotnet, julia, ocaml and go bindings.
+
+### zpp_bits
+
+The `zpp_bits` recipe packages the single header `zpp_bits.h`.
 
 ## CMake targets
 
@@ -163,8 +201,9 @@ The other packages use the conan defaults,
 so `random123` is `find_package(random123)` and `random123::random123`.
 
 `hdf5_plugins` sets no cmake target name of its own.
-With the `zfp` option on it packages the `h5zzfp` static library,
-which carries the property list interface of `H5Zzfp.h`.
+With the `zfp` option on, it packages the `h5zzfp` static library
+and the `zfp` codec archive that `h5zzfp` links against.
+`h5zzfp` carries the property list interface of `H5Zzfp.h`.
 hdf5 loads every other filter at run time,
 so nothing is left to link against.
 The recipe adds its plugin directory to `HDF5_PLUGIN_PATH` instead,

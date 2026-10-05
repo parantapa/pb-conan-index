@@ -1,6 +1,6 @@
 # pb-conan-index
 
-PB's personal conan recipes index.
+pb-conan-index is PB's personal index of conan recipes.
 
 This repository holds conan recipes for two kinds of package.
 The first is missing from conancenter.
@@ -27,7 +27,8 @@ conan list "*" -r=pb-conan-index
 ```
 
 Pull updates with `git pull`.
-The remote reads the working tree, so no further conan command is needed.
+The remote reads the working tree,
+so an update needs no further conan command.
 
 ## Usage
 
@@ -49,6 +50,9 @@ Then build the dependencies, since this index serves recipes only:
 conan install . --build=missing
 ```
 
+conan builds the two packages from source,
+and writes the CMakeDeps and CMakeToolchain files into the current folder.
+
 ## Documentation
 
 | Document | Contents |
@@ -59,7 +63,11 @@ conan install . --build=missing
 | [The Stan Math dependencies](docs/explanation/stan-math-dependencies.md) | Why eigen is held back, and what the sundials and tbb patches are for. |
 | [The libtorch build configuration](docs/explanation/libtorch-build-configuration.md) | Why so much of PyTorch is left out, how the source is assembled, and why the cmake target force links. |
 
-Report a bug at <https://github.com/parantapa/pb-conan-index/issues>.
+## Developer documentation
+
+| Document | Contents |
+| --- | --- |
+| [Developer notes](DEVELOPER-NOTES.md) | The map of the recipes, how to build and check one, the tools, and the design decisions that span recipes. |
 
 ## License
 

@@ -44,10 +44,10 @@ class LibTorchRecipe(ConanFile):
         "with_mkldnn": False,
     }
 
-    def requirements(self):
+    def requirements(self) -> None:
         self.requires("eigen/5.0.1")
 
-    def validate(self):
+    def validate(self) -> None:
         check_min_cppstd(self, 20)
 
         if self.settings.os not in ["Linux", "FreeBSD", "Macos"]:
@@ -61,10 +61,10 @@ class LibTorchRecipe(ConanFile):
             )
 
     @property
-    def _codegen_modules(self):
+    def _codegen_modules(self) -> list[str]:
         return ["yaml", "typing_extensions"]
 
-    def validate_build(self):
+    def validate_build(self) -> None:
         python = shutil.which("python3") or shutil.which("python")
         if python is None:
             raise ConanInvalidConfiguration(
@@ -126,7 +126,7 @@ class LibTorchRecipe(ConanFile):
     # source() cannot read options here either.
     _mkldnn_submodules = ("third_party/ideep",)
 
-    def source(self):
+    def source(self) -> None:
         source = self.conan_data["sources"][self.version]
 
         git = Git(self)
@@ -146,7 +146,7 @@ class LibTorchRecipe(ConanFile):
 
         self._patch_sources()
 
-    def _patch_sources(self):
+    def _patch_sources(self) -> None:
         replace_in_file(
             self,
             os.path.join(self.source_folder, "cmake", "PreBuildSteps.cmake"),
@@ -154,10 +154,10 @@ class LibTorchRecipe(ConanFile):
             "if(FALSE)  # conan fetches the submodules it needs in source()",
         )
 
-    def layout(self):
+    def layout(self) -> None:
         cmake_layout(self, src_folder="pytorch")
 
-    def generate(self):
+    def generate(self) -> None:
         deps = CMakeDeps(self)
         deps.generate()
 
@@ -177,7 +177,7 @@ class LibTorchRecipe(ConanFile):
         tc.cache_variables["BUILD_LAZY_TS_BACKEND"] = False
 
         # ---- accelerators
-        # The CUDA toolkit and cuDNN are taken from the build machine.
+        # The build takes the CUDA toolkit and cuDNN from the build machine.
         cuda = bool(self.options.with_cuda)
 
         tc.cache_variables["USE_CUDA"] = cuda
@@ -236,7 +236,7 @@ class LibTorchRecipe(ConanFile):
 
         tc.cache_variables["USE_OPENMP"] = bool(self.options.with_openmp)
 
-        # MKL is named explicitly rather than left to the default.
+        # The recipe names MKL explicitly rather than leave it to the default.
         # FindMKL then runs under find_package(MKL REQUIRED),
         # so a machine without MKL fails at configure time
         # instead of falling back to eigen for BLAS.
@@ -254,7 +254,7 @@ class LibTorchRecipe(ConanFile):
 
         tc.generate()
 
-    def build(self):
+    def build(self) -> None:
         cmake = CMake(self)
         cmake.configure()
         cmake.build()
@@ -262,7 +262,7 @@ class LibTorchRecipe(ConanFile):
     # The only directories of the install tree this package keeps.
     _package_roots = ("include", "lib", "licenses", "share")
 
-    def package(self):
+    def package(self) -> None:
         copy(
             self,
             "LICENSE",
@@ -301,7 +301,7 @@ class LibTorchRecipe(ConanFile):
             os.path.join(self.package_folder, "share", "_orig_cmake"),
         )
 
-    def package_info(self):
+    def package_info(self) -> None:
         if self.options.with_cuda:
             self.cpp_info.libs = [
                 "torch",
@@ -322,20 +322,22 @@ class LibTorchRecipe(ConanFile):
             self.cpp_info.system_libs = ["m", "dl", "pthread", "rt"]
 
             # libtorch is a shim with no code of its own
-            # that a consumer references. It carries a DT_NEEDED on
-            # torch_cpu and c10, and with CUDA on torch_cuda and c10_cuda.
+            # that a consumer references.
+            # It carries a DT_NEEDED on torch_cpu and c10,
+            # and with CUDA on torch_cuda and c10_cuda.
             # The linker default of --as-needed therefore drops it,
             # and everything reachable only through it goes with it.
-            # What that costs is the registration that runs from static
-            # initializers. With torch_cuda dropped, the CUDA hooks are
-            # never installed, and torch::cuda::is_available() answers false
+            # What that costs is the registration
+            # that runs from static initializers.
+            # With torch_cuda dropped, nothing installs the CUDA hooks,
+            # and torch::cuda::is_available() answers false
             # on a machine with a working GPU.
             # Upstream hits this too and force links the same way,
             # in the torch target of its own Caffe2Targets.cmake.
             if self.options.shared:
                 torch_library = os.path.join(self.package_folder, "lib", "libtorch.so")
                 # One flag per list entry:
-                # a single string is passed to the linker as one argument.
+                # conan passes a single string to the linker as one argument.
                 force_link = [
                     f"-Wl,--no-as-needed,{torch_library}",
                     "-Wl,--as-needed",

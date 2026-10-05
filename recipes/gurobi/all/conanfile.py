@@ -28,29 +28,32 @@ class Gurobi(ConanFile):
     no_copy_source = True
 
     @property
-    def _lib_version(self):
+    def _lib_version(self) -> str:
         # Gurobi names its shared library after the major and minor version,
         # so 13.0.0 ships "libgurobi130.so".
         major, minor, _ = self.version.removesuffix(".pci").split(".")
         return f"{major}{minor}"
 
-    def validate(self):
+    def validate(self) -> None:
         if self.settings.os != "Linux" or self.settings.arch != "x86_64":
             raise ConanInvalidConfiguration(
                 "This recipe packages the linux64 distribution of Gurobi; "
                 f"{self.settings.os}/{self.settings.arch} is not supported."
             )
 
-    def source(self):
+    def source(self) -> None:
         get(self, **self.conan_data["sources"][self.version], strip_root=True)
 
-    def build(self):
+    def build(self) -> None:
+        # no_copy_source leaves the sources out of the build folder,
+        # so build() copies the C++ wrapper sources and headers in for make.
         copy(self, "linux64/src/*", self.source_folder, self.build_folder)
         copy(self, "linux64/include/*", self.source_folder, self.build_folder)
 
         compiler = self.conf.get(
             "tools.build:compiler_executables", default={}, check_type=dict
         ).get("cpp")
+        # The Gurobi makefile names its compiler variable C++.
         args = [f'"C++={compiler}"'] if compiler else []
 
         self.run(
@@ -58,7 +61,7 @@ class Gurobi(ConanFile):
             cwd=os.path.join(self.build_folder, "linux64/src/build"),
         )
 
-    def package(self):
+    def package(self) -> None:
         copy(
             self,
             "EULA.pdf",
@@ -96,5 +99,5 @@ class Gurobi(ConanFile):
             os.path.join(self.package_folder, "lib"),
         )
 
-    def package_info(self):
+    def package_info(self) -> None:
         self.cpp_info.libs = ["gurobi_c++", f"gurobi{self._lib_version}"]

@@ -15,8 +15,8 @@ wrapper and `sundials/sundials_types.h` still exports `realtype`.
 sundials 7 moved those into `sundials_context.hpp`
 and `sundials_types_deprecated.h`,
 so the recipe pulls both in alongside the header Stan Math asks for.
-The cvodes, cvodes adjoint, idas and kinsol solvers were checked
-against gradients and closed-form solutions after the patch.
+A check after the patch compared the cvodes, cvodes adjoint, idas and kinsol solvers
+against gradients and closed-form solutions.
 
 The recipe exports `TBB_INTERFACE_NEW`,
 which `init_threadpool_tbb.hpp` otherwise decides for itself

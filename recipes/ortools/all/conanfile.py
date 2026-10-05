@@ -32,16 +32,17 @@ class ORToolsRecipe(ConanFile):
     }
     # or-tools registers its solvers through static initializers,
     # which a linker drops from a static archive because nothing refers to them.
-    # A static build therefore loses GLOP and MathOpt at run time,
-    # unless every consumer links the whole archive.
+    # Unless every consumer links the whole archive,
+    # a static build therefore loses GLOP and MathOpt at run time.
     # This recipe follows the upstream Unix default and builds shared.
     default_options = {"shared": True, "fPIC": True}
 
-    # The public headers re-export abseil types whose layout depends on the
-    # C++ standard, so a binary built for one standard cannot serve another.
+    # The public headers re-export abseil types
+    # whose layout depends on the C++ standard,
+    # so a binary built for one standard cannot serve another.
     extension_properties = {"compatibility_cppstd": False}
 
-    def requirements(self):
+    def requirements(self) -> None:
         self.requires("zlib/1.3.2", transitive_headers=True, transitive_libs=True)
         self.requires("bzip2/1.0.8", transitive_libs=True)
         self.requires(
@@ -51,20 +52,20 @@ class ORToolsRecipe(ConanFile):
         self.requires("eigen/5.0.1", transitive_headers=True)
         self.requires("re2/20251105", transitive_libs=True)
 
-    def build_requirements(self):
+    def build_requirements(self) -> None:
         self.tool_requires("protobuf/6.33.5")
 
-    def validate(self):
+    def validate(self) -> None:
         check_min_cppstd(self, 17)
 
-    def source(self):
+    def source(self) -> None:
         get(self, **self.conan_data["sources"][self.version], strip_root=True)
 
-    def layout(self):
+    def layout(self) -> None:
         cmake_layout(self, src_folder="or-tools")
 
     @property
-    def _cppstd(self):
+    def _cppstd(self) -> str:
         # or-tools hardcodes the C++ standard, so the recipe must know which
         # one the profile asked for. With no cppstd in the profile the compiler
         # default applies, which upstream assumes to be C++17 at the least.
@@ -73,10 +74,10 @@ class ORToolsRecipe(ConanFile):
             return "17"
         return str(cppstd).replace("gnu", "")
 
-    def _patch_sources(self):
+    def _patch_sources(self) -> None:
         # or-tools pins CXX_STANDARD to 17 (20 on MSVC) after project(),
         # which overrides the standard the conan toolchain sets.
-        # Its abseil dependency is packaged per standard,
+        # Conan packages its abseil dependency per standard,
         # and its headers only compile under the standard it was built with.
         # The pin therefore breaks every profile above C++17.
         replacements = [
@@ -101,7 +102,7 @@ class ORToolsRecipe(ConanFile):
                     self, path, "CXX_STANDARD 20", f"CXX_STANDARD {self._cppstd}"
                 )
 
-    def generate(self):
+    def generate(self) -> None:
         deps = CMakeDeps(self)
         deps.generate()
 
@@ -129,14 +130,16 @@ class ORToolsRecipe(ConanFile):
 
         tc.generate()
 
-    def build(self):
+    def build(self) -> None:
+        # The patch depends on compiler.cppstd,
+        # which source() cannot read.
         self._patch_sources()
 
         cmake = CMake(self)
         cmake.configure()
         cmake.build()
 
-    def package(self):
+    def package(self) -> None:
         copy(
             self,
             "LICENSE",
@@ -147,13 +150,14 @@ class ORToolsRecipe(ConanFile):
         cmake = CMake(self)
         cmake.install()
 
+        # See "The upstream cmake package files" in the developer notes.
         rename(
             self,
             os.path.join(self.package_folder, "lib", "cmake"),
             os.path.join(self.package_folder, "lib", "_orig_cmake"),
         )
 
-    def package_info(self):
+    def package_info(self) -> None:
         self.cpp_info.libs = ["ortools"]
 
         if self.settings.os in ["Linux", "FreeBSD"]:

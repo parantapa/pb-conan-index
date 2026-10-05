@@ -25,13 +25,13 @@ class TaskflowRecipe(ConanFile):
     implements = ["auto_header_only"]
     settings = "os", "arch", "compiler", "build_type"
 
-    def layout(self):
+    def layout(self) -> None:
         basic_layout(self, src_folder="taskflow")
 
-    def source(self):
+    def source(self) -> None:
         get(self, **self.conan_data["sources"][self.version], strip_root=True)
 
-    def package(self):
+    def package(self) -> None:
         copy(
             self,
             "LICENSE",
@@ -45,7 +45,7 @@ class TaskflowRecipe(ConanFile):
             dst=os.path.join(self.package_folder, "include", "taskflow"),
         )
 
-    def package_info(self):
+    def package_info(self) -> None:
         self.cpp_info.bindirs = []
         self.cpp_info.libdirs = []
 

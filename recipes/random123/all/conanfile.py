@@ -20,7 +20,7 @@ class Random123(ConanFile):
     package_type = "header-library"
     no_copy_source = True
 
-    def source(self):
+    def source(self) -> None:
         tag = "v" + self.version.removesuffix(".pci")
 
         git = Git(self)
@@ -30,7 +30,7 @@ class Random123(ConanFile):
             args=["--branch", tag, "--depth", "1"],
         )
 
-    def package(self):
+    def package(self) -> None:
         copy(
             self,
             "LICENSE",
@@ -42,6 +42,6 @@ class Random123(ConanFile):
         copy(self, "include/*.h", self.source_folder, self.package_folder)
         copy(self, "include/*.hpp", self.source_folder, self.package_folder)
 
-    def package_info(self):
+    def package_info(self) -> None:
         self.cpp_info.bindirs = []
         self.cpp_info.libdirs = []
