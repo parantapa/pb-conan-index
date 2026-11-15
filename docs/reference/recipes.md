@@ -19,6 +19,7 @@
 | `stan_math` | `5.3.0.pci` | <https://github.com/stan-dev/math> |
 | `taskflow` | `4.1.0.pci` | <https://github.com/taskflow/taskflow> |
 | `treedecomp` | `20260921.pci` | <https://github.com/meelgroup/treedecomp> |
+| `upcxx` | `2025.10.0.pci` | <https://upcxx.lbl.gov> |
 | `z3` | `5.1.0.pci` | <https://github.com/Z3Prover/z3> |
 | `zpp_bits` | `4.7.6.pci` | <https://github.com/eyalz800/zpp_bits> |
 
@@ -211,6 +212,67 @@ See [The Stan Math dependencies](../explanation/stan-math-dependencies.md).
 The `taskflow` recipe packages the headers only.
 On Linux and FreeBSD, consumers also link `pthread`.
 
+### upcxx
+
+The `upcxx` recipe packages UPC++
+with the GASNet-EX that its release tarball bundles.
+It supports Linux, FreeBSD and macOS.
+The package holds the static libraries, the headers,
+and the `upcxx`, `upcxx-run`, `upcxx-meta` and `upcxx-info` tools.
+
+The HPC libraries come from the build machine, not from conan.
+These are PMIx, hwloc, rdma-core, UCX, libfabric and MPI.
+The recipe finds the install prefix of PMIx and hwloc through pkg-config.
+Conan neither provides nor records this dependency,
+so the same libraries must be present
+wherever the package is consumed.
+
+Each GASNet-EX conduit sits behind an option of its own:
+`smp`, `udp`, `ibv`, `ucx` and `ofi`.
+Only `smp` is on by default.
+`ibv` and `ucx` exist on Linux only.
+`mpi`, off by default, adds the mpi conduit,
+and builds with the `mpicxx` on `PATH`,
+or with the compiler that `MPICXX` names.
+A consumer of the mpi network links MPI itself.
+
+`pmi`, on by default, makes PMIx the job spawner
+of every enabled conduit that has one.
+`launcher` picks the command that starts a PMIx job.
+`prterun`, the default, is the launcher of PRRTE.
+`srun` runs `srun --mpi=pmix` on Slurm clusters.
+GASNet-EX resolves the launcher to its absolute path at build time.
+`PMIRUN_CMD` in the environment overrides it at run time.
+`hwloc`, on by default, enables hwloc support in GASNet-EX.
+CUDA, HIP, Level Zero and PLPA are always off.
+
+`network` picks the default network of the `upcxx` compiler wrapper.
+It is also the network that conan reports to consumers.
+Its default, `auto`, takes the first enabled conduit
+in the order `smp`, `udp`, `ibv`, `ucx`, `ofi`, `mpi`.
+
+UPC++ installs every code mode and thread mode in one package.
+`build_type=Debug` gives a consumer the debug code mode,
+and any other build type gives it the opt code mode.
+The `threadmode` option picks `seq`, the default, or `par`.
+Neither `build_type` nor `threadmode` changes the package id.
+
+The package type is `static-library`,
+so conan does not put the package tools on the `PATH` of a consumer by default.
+A consumer that runs jobs with `upcxx-run`
+declares the requirement with `run=True`.
+`VirtualRunEnv` then adds `bin` to `PATH`,
+and sets `UPCXX_INSTALL` to the package folder.
+
+The package is relocatable.
+The `upcxx`, `upcxx-meta` and `test-upcxx-install.sh` scripts,
+the GASNet-EX `.pc` and `.mak` files, and the modulefile
+find the install from their own location,
+so they keep working after the package moves to another folder or cache.
+A symbolic link to `upcxx` works too.
+The path of the package must not contain a space,
+because the upstream `upcxx` wrapper does not quote it.
+
 ### z3
 
 The `z3` recipe packages the C and C++ library only.
@@ -232,6 +294,9 @@ which matches the target upstream exports.
 and linked as `z3::libz3`.
 `clingo` is found as `find_package(Clingo)`
 and linked as `libclingo`, without a namespace,
+which matches the target upstream exports.
+`upcxx` is found as `find_package(UPCXX)`
+and linked as `UPCXX::upcxx`,
 which matches the target upstream exports.
 `libtorch` is found as `find_package(Torch)`
 and linked as `torch`, without a namespace,

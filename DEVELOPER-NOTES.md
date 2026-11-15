@@ -59,8 +59,11 @@ so pyright reports nothing for these files.
 - CMake: most recipes build through `CMakeToolchain` and `CMake`,
   and those that build against other recipes generate them with `CMakeDeps`.
   `gurobi` builds with `make`,
+  `upcxx` runs its own `configure` and then `make`,
   and the header only recipes have no build step.
-- pkg-config: `cryptominisat5`, `arjun`, `approxmc` and `ganak`
+- pkg-config: `upcxx` asks pkg-config for the install prefix
+  of the system `pmix` and `hwloc`.
+  `cryptominisat5`, `arjun`, `approxmc` and `ganak`
   find `gmp`, `mpfr` and `flint` through `pkg_check_modules`.
   These recipes generate `.pc` files with `PkgConfigDeps`,
   and take `pkgconf` as a tool requirement.
@@ -126,3 +129,55 @@ so the recipes delete that line in `source()`.
 `cryptominisat5` sets the same order,
 but it asks pkg-config for `gmp` alone, which adds no system library,
 so its recipe leaves the line in place.
+
+### The upcxx flags file
+
+The `upcxx` recipe does not report flags
+by running `upcxx-meta` in `package_info`.
+That would cost a shell process for every consumer of the package.
+`package()` runs `bin/upcxx-meta` once for every code mode,
+thread mode and network instead.
+It records the flags in `share/conan/upcxx-flags.json`,
+with every path inside the package made relative to the package folder.
+`package_info` reads the entry that `build_type`, `threadmode` and `network` select.
+The cost is a parser of the `upcxx-meta` output in the recipe.
+It drops the GASNet-EX optimization and warning flags,
+and the `libgcc` that the compiler links on its own.
+
+The recipe calls `configure` itself instead of using `AutotoolsToolchain`.
+It also unsets `CFLAGS`, `CXXFLAGS`, `CPPFLAGS`, `LDFLAGS` and `LIBS`.
+UPC++ passes those to every code mode it builds,
+where they would replace the flags that tell the debug and opt code modes apart.
+
+### The upcxx relocation
+
+The UPC++ install writes its absolute prefix into the scripts it installs.
+`package()` rewrites every file that reads the prefix back,
+so that the package works from any folder.
+
+- The outer `bin/upcxx-meta` takes the prefix from `BASH_SOURCE`,
+  and exports it as `UPCXXI_INSTALL_PREFIX`.
+  It does not fork, because upstream keeps its `DUMP` branch free of forks.
+- Each inner `upcxx-meta` refers to the prefix
+  as the token `${UPCXXI_INSTALL_PREFIX:?}`.
+  The token expands when bash sources the script,
+  and when `/bin/sh` runs it with the variable in the environment.
+  A single quoted value becomes double quoted, so that it expands.
+  An inner script run on its own fails instead of printing paths under `/`.
+- `DUMP` prints the inner script for its caller to evaluate,
+  so it puts the prefix itself in place of the token.
+- `bin/upcxx` and `test-upcxx-install.sh` find their folder with `cd -P`,
+  which follows a symbolic link back into the package.
+- The GASNet-EX `.pc` files use `${pcfiledir}`,
+  and the `.mak` files compute `GASNET_PREFIX` from `MAKEFILE_LIST`.
+- The modulefile computes the prefix from `[info script]`.
+
+`upcxx_config.hpp` and `config-details.txt` keep the build path.
+They only record the configure command.
+After the rewrite, `package()` fails
+if any other text file still holds the prefix.
+A new conduit, option or upstream release
+that installs another such file then fails the package build,
+instead of shipping a package that only works in one folder.
+`package()` collects the flags through the rewritten `bin/upcxx-meta`,
+so every package build also runs the relocated scripts.
