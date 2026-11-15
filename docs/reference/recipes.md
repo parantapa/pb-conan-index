@@ -148,11 +148,11 @@ so the same ones must be present wherever the package is consumed.
 It does not follow `build_type`.
 
 The profile must ask for `compiler.cppstd=20` or later.
-The build needs cmake 3.25 or newer.
+The build needs cmake 3.22 or newer.
 It takes the cmake that `tools.cmake:cmake_program` names,
 or else the first one on the `PATH` of the build environment.
 That `PATH` puts a cmake from `tool_requires` before the system one.
-A `tool_requires` cmake older than 3.25 is rejected before anything is built.
+A `tool_requires` cmake older than 3.22 is rejected before anything is built.
 Any other cmake is checked when the build starts, before anything is compiled.
 
 ### libtorch
@@ -212,7 +212,9 @@ The profile must therefore ask for `compiler.cppstd=20` or later.
 `validate` rejects anything lower rather than build a package
 no consumer on that profile can include.
 
-The build needs a python interpreter on `PATH`
+The build needs cmake 3.27 or newer,
+which upstream asks for at configure time.
+It also needs a python interpreter on `PATH`
 with `pyyaml` and `typing_extensions` installed.
 During the build, torchgen generates the ATen operator and autograd sources.
 `validate_build` says so before anything is compiled.
@@ -226,6 +228,8 @@ It builds the BOP, GLOP, PDLP and MathOpt solvers,
 and leaves COIN-OR, GLPK, HiGHS, SCIP and CPLEX out.
 The recipe does not build the flatzinc front end,
 or the python, java and dotnet bindings.
+The build needs cmake 3.24 or newer,
+which upstream asks for at configure time.
 
 ### random123
 

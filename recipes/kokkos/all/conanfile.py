@@ -91,9 +91,10 @@ class KokkosRecipe(ConanFile):
     # The backends this recipe always turns off.
     _disabled_backends = ("HPX", "OPENACC", "HIP", "SYCL", "NEXTSILICON")
 
-    # The oldest cmake this index builds kokkos with.
-    # Upstream itself asks for 3.22.
-    _min_cmake = "3.25"
+    # The cmake_minimum_required of upstream.
+    # Upstream asks for 3.25.2 only to compile CUDA as a CMake language,
+    # which this recipe does not do.
+    _min_cmake = "3.22"
 
     package_type = "library"
     settings = "os", "arch", "compiler", "build_type"

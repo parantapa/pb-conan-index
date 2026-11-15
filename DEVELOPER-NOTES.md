@@ -59,7 +59,7 @@ so pyright reports nothing for these files.
 - CMake: most recipes build through `CMakeToolchain` and `CMake`,
   with the cmake on `PATH`,
   and those that build against other recipes generate them with `CMakeDeps`.
-  `kokkos` needs cmake 3.25 or newer, from the system or from `tool_requires`.
+  `kokkos` needs cmake 3.22 or newer, from the system or from `tool_requires`.
   `validate` checks a `tool_requires` cmake,
   and `build` checks the cmake that the build environment runs.
   `gurobi` builds with `make`,
