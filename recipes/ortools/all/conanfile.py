@@ -66,9 +66,10 @@ class ORToolsRecipe(ConanFile):
 
     @property
     def _cppstd(self) -> str:
-        # or-tools hardcodes the C++ standard, so the recipe must know which
-        # one the profile asked for. With no cppstd in the profile the compiler
-        # default applies, which upstream assumes to be C++17 at the least.
+        # or-tools hardcodes the C++ standard,
+        # so the recipe must know which one the profile asked for.
+        # With no cppstd in the profile, the recipe falls back to C++17.
+        # A gnu standard maps to the plain standard of the same number.
         cppstd = self.settings.get_safe("compiler.cppstd")
         if cppstd is None:
             return "17"
@@ -123,9 +124,7 @@ class ORToolsRecipe(ConanFile):
         # so it fails to build against a C++20 abseil.
         tc.variables["BUILD_FLATZINC"] = False
 
-        # GNUInstallDirs picks lib64 on 64-bit non-Debian Linux,
-        # and that puts the library outside the directories
-        # this recipe reports to consumers.
+        # See "The library directory" in the developer notes.
         tc.cache_variables["CMAKE_INSTALL_LIBDIR"] = "lib"
 
         tc.generate()
@@ -173,8 +172,8 @@ class ORToolsRecipe(ConanFile):
 
         # or-tools compiles itself with -fwrapv and exports it to consumers,
         # since its inline code relies on signed overflow wrapping.
-        # The -Wno-range-loop-construct and -Wno-sign-compare that upstream
-        # exports alongside it are left out on purpose.
-        # They silence those warnings in consumer code too.
+        # Upstream also exports -Wno-range-loop-construct and -Wno-sign-compare.
+        # The recipe leaves them out on purpose,
+        # because they would silence those warnings in consumer code.
         if not is_msvc(self):
             self.cpp_info.cxxflags = ["-fwrapv"]

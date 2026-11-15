@@ -47,6 +47,9 @@ class HDF5PluginsRecipe(ConanFile):
     package_type = "static-library"
     settings = "os", "compiler", "build_type", "arch"
     options = {_filter: [True, False] for _filter in _filters}
+    # A shared hdf5 is the default, because a static one
+    # makes every consumer export its symbols to the filters.
+    # See "The hdf5_plugins against a static hdf5" in the developer notes.
     default_options = dict(
         {_filter: True for _filter in _filters},
         **{"hdf5/*:shared": True},
@@ -59,6 +62,8 @@ class HDF5PluginsRecipe(ConanFile):
         self.requires("hdf5/1.14.6", transitive_headers=True, transitive_libs=True)
 
     def validate(self) -> None:
+        # A dll cannot leave the hdf5 symbols undefined.
+        # See "The hdf5_plugins against a static hdf5" in the developer notes.
         if (
             not self.dependencies["hdf5"].options.shared
             and self.settings.os == "Windows"
@@ -72,7 +77,7 @@ class HDF5PluginsRecipe(ConanFile):
 
     @property
     def _upstream_version(self) -> str:
-        # The version of this index carries a suffix that upstream does not.
+        # See "The .pci version suffix" in the developer notes.
         return self.version.removesuffix(".pci")
 
     def source(self) -> None:
@@ -114,13 +119,8 @@ class HDF5PluginsRecipe(ConanFile):
         if self.dependencies["hdf5"].options.shared:
             support += "set(H5PL_HDF5_LINK_LIBS hdf5::hdf5)\n"
         else:
-            # hdf5 loads a filter into a process that already runs hdf5.
-            # A static hdf5 linked into the filter
-            # puts a second copy of the library in that process.
-            # A filter that calls back into hdf5 from its set_local
-            # callback then fails to recognize the caller's property list.
-            # So the recipe gives the filters the hdf5 headers but no hdf5 to link.
-            # The loading process then resolves their hdf5 symbols.
+            # The filters get the hdf5 headers but no hdf5 to link.
+            # See "The hdf5_plugins against a static hdf5" in the developer notes.
             support += textwrap.dedent("""\
                 add_library(h5pl_hdf5_headers INTERFACE)
                 target_include_directories(
@@ -217,15 +217,8 @@ class HDF5PluginsRecipe(ConanFile):
         self.cpp_info.bindirs = []
 
         if self.options.zfp:
-            # H5Zzfp.h declares two ways to reach the zfp filter.
-            # The macros of H5Zzfp_plugin.h fill in a cd_values array
-            # for the filter that hdf5 loads from the plugin directory,
-            # and need nothing to link against.
-            # The functions of H5Zzfp_lib.h and H5Zzfp_props.h
-            # register the filter with hdf5 directly instead,
-            # and live in h5zzfp.
-            # That library in turn calls into the zfp codec
-            # it was built against.
+            # The functions of H5Zzfp_lib.h and H5Zzfp_props.h live in h5zzfp,
+            # which links against the zfp codec it was built with.
             self.cpp_info.libs = ["h5zzfp", "zfp"]
             self.cpp_info.libdirs = ["lib"]
             if self.settings.os in ["Linux", "FreeBSD"]:
@@ -238,10 +231,8 @@ class HDF5PluginsRecipe(ConanFile):
             self.cpp_info.includedirs = []
 
         if not self.dependencies["hdf5"].options.shared:
-            # Against a static hdf5 the filters carry no hdf5 of their own,
-            # and look the symbols up in the process that loads them.
-            # The lookup only finds them
-            # if the program put its own symbols in the dynamic symbol table.
+            # The program exports its symbols, so the filters find hdf5 in it.
+            # See "The hdf5_plugins against a static hdf5" in the developer notes.
             if self.settings.os == "Macos":
                 self.cpp_info.exelinkflags = ["-Wl,-export_dynamic"]
             elif self.settings.os in ["Linux", "FreeBSD"]:

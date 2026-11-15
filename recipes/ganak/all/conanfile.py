@@ -33,8 +33,9 @@ class GanakRecipe(ConanFile):
     default_options = {"shared": False, "fPIC": True}
 
     def requirements(self) -> None:
-        # The versions of the meelgroup and msoos recipes below
-        # are the commits that the flake.lock of the ganak release pins.
+        # The pinned revisions: see the ganak family in "Map of the source"
+        # in the developer notes.
+
         # ganak.hpp includes the cryptominisat5 headers,
         # and ganak_c.h includes arjun/arjun_c.h.
         self.requires(

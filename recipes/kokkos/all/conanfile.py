@@ -1,8 +1,8 @@
 # type: ignore
 import os
 import re
-import shutil
-import subprocess
+import shlex
+from io import StringIO
 
 from conan import ConanFile
 from conan.errors import ConanException, ConanInvalidConfiguration
@@ -91,7 +91,8 @@ class KokkosRecipe(ConanFile):
     # The backends this recipe always turns off.
     _disabled_backends = ("HPX", "OPENACC", "HIP", "SYCL", "NEXTSILICON")
 
-    # The oldest cmake that this recipe builds with.
+    # The oldest cmake this index builds kokkos with.
+    # Upstream itself asks for 3.22.
     _min_cmake = "3.25"
 
     package_type = "library"
@@ -148,22 +149,15 @@ class KokkosRecipe(ConanFile):
                 "cuda=True needs cuda_arch, the compute capability to build for, "
                 "such as 80 or 89."
             )
-
-    def validate_build(self) -> None:
-        cmake = self.conf.get("tools.cmake:cmake_program", default="cmake")
-        if shutil.which(cmake) is None:
-            raise ConanInvalidConfiguration(
-                f"Building kokkos needs cmake {self._min_cmake} or newer on PATH."
-            )
-        output = subprocess.run(
-            [cmake, "--version"], capture_output=True, text=True
-        ).stdout
-        match = re.search(r"cmake version (\d+\.\d+(?:\.\d+)?)", output)
-        if match is None or Version(match.group(1)) < self._min_cmake:
-            found = match.group(1) if match else "unknown"
+        # A cmake from tool_requires is known before anything is built.
+        # A cmake from the system is checked in build().
+        # The get() of a dependency set raises on a missing name.
+        build = self.dependencies.build
+        cmake = build["cmake"] if "cmake" in build else None
+        if cmake is not None and Version(cmake.ref.version) < self._min_cmake:
             raise ConanInvalidConfiguration(
                 f"Building kokkos needs cmake {self._min_cmake} or newer, "
-                f"found {found}."
+                f"tool_requires gives {cmake.ref.version}."
             )
 
     def source(self) -> None:
@@ -213,11 +207,41 @@ class KokkosRecipe(ConanFile):
         tc.cache_variables["Kokkos_ENABLE_TESTS"] = False
         tc.cache_variables["Kokkos_ENABLE_EXAMPLES"] = False
         tc.cache_variables["Kokkos_ENABLE_BENCHMARKS"] = False
+        # See "The library directory" in the developer notes.
         tc.cache_variables["CMAKE_INSTALL_LIBDIR"] = "lib"
 
         tc.generate()
 
+    def _check_cmake(self) -> None:
+        # Run the cmake that CMake() runs:
+        # the one tools.cmake:cmake_program names,
+        # or the first on the PATH of the build environment.
+        # That PATH holds the bin folders of tool_requires
+        # and the [buildenv] of the profile before the system PATH.
+        program = self.conf.get("tools.cmake:cmake_program", default="cmake")
+        output = StringIO()
+        try:
+            self.run(
+                f"{shlex.quote(program)} --version",
+                stdout=output,
+                env="conanbuild",
+                quiet=True,
+            )
+        except ConanException as error:
+            raise ConanException(
+                f"Building kokkos needs cmake {self._min_cmake} or newer, "
+                f"and {program} does not run: {error}"
+            ) from error
+        match = re.search(r"cmake version (\d+\.\d+(?:\.\d+)?)", output.getvalue())
+        if match is None or Version(match.group(1)) < self._min_cmake:
+            found = match.group(1) if match else "unknown"
+            raise ConanException(
+                f"Building kokkos needs cmake {self._min_cmake} or newer, "
+                f"found {found}."
+            )
+
     def build(self) -> None:
+        self._check_cmake()
         cmake = CMake(self)
         cmake.configure()
         cmake.build()
@@ -265,6 +289,7 @@ class KokkosRecipe(ConanFile):
                 file = os.path.join(root, name)
                 with open(file, "rb") as handle:
                     data = handle.read()
+                # Binary files only carry the prefix in debug and ident strings.
                 if b"\0" not in data and prefix in data:
                     left.append(os.path.relpath(file, self.package_folder))
         if left:
@@ -273,14 +298,8 @@ class KokkosRecipe(ConanFile):
             )
 
     def package_info(self) -> None:
-        # CMake consumers use the package files that upstream installs.
-        # They carry what CMakeDeps cannot express:
-        # the compile and link flags of each backend and architecture
-        # inside generator expressions,
-        # the lookup of CUDAToolkit, OpenMP and hwloc,
-        # the kokkos_launch_compiler redirection
-        # that compiles CUDA code through nvcc_wrapper,
-        # and the kokkos_check and kokkos_compilation functions.
+        # Consumers use the upstream package files instead of CMakeDeps.
+        # See "The upstream cmake package files" in the developer notes.
         self.cpp_info.set_property("cmake_find_mode", "none")
         self.cpp_info.set_property("cmake_file_name", "Kokkos")
 
@@ -292,6 +311,7 @@ class KokkosRecipe(ConanFile):
         # CMakeToolchain puts builddirs on CMAKE_PREFIX_PATH.
         # With components, it reads them from the components only.
         core.builddirs = [self._cmake_folder]
+        # Upstream adds KOKKOS_DEPENDENCE in CMakeLists.txt for kokkos_launch_compiler.
         core.defines = ["KOKKOS_DEPENDENCE"]
         if self.settings.os in ("Linux", "FreeBSD"):
             core.system_libs = ["dl", "pthread"]

@@ -2,6 +2,10 @@
 
 ## What the build leaves out
 
+The optional CPU kernel libraries are each a vendored source tree of their own.
+Together they are most of what makes a stock PyTorch build slow,
+so the recipe leaves them out.
+
 `with_cuda` turns on CUDA and cuDNN themselves.
 The other optional CUDA libraries stay off.
 cuSPARSELt backs the cuSPARSELt half of 2:4 semi-structured sparsity,

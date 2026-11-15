@@ -43,8 +43,8 @@ class SBVARecipe(ConanFile):
         cmake_layout(self, src_folder="sbva")
 
     def generate(self) -> None:
-        # sbva.cpp includes the eigen 3.4.0 that upstream vendors,
-        # through a private include path.
+        # No eigen requirement: sbva.cpp includes the eigen 3.4.0
+        # that upstream vendors, through a private include path.
         # No installed header includes eigen, so the vendored copy stays.
         tc = CMakeToolchain(self)
 

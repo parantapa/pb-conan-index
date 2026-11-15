@@ -31,6 +31,7 @@ class Gurobi(ConanFile):
     def _lib_version(self) -> str:
         # Gurobi names its shared library after the major and minor version,
         # so 13.0.0 ships "libgurobi130.so".
+        # See "The .pci version suffix" in the developer notes.
         major, minor, _ = self.version.removesuffix(".pci").split(".")
         return f"{major}{minor}"
 

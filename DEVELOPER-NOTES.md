@@ -59,12 +59,15 @@ so pyright reports nothing for these files.
 - CMake: most recipes build through `CMakeToolchain` and `CMake`,
   with the cmake on `PATH`,
   and those that build against other recipes generate them with `CMakeDeps`.
-  `kokkos` checks for cmake 3.25 or newer in `validate_build`.
+  `kokkos` needs cmake 3.25 or newer, from the system or from `tool_requires`.
+  `validate` checks a `tool_requires` cmake,
+  and `build` checks the cmake that the build environment runs.
   `gurobi` builds with `make`,
   `upcxx` runs its own `configure` and then `make`,
   and the header only recipes have no build step.
 - pkg-config: `upcxx` asks pkg-config for the install prefix
-  of the system `pmix` and `hwloc`, and `kokkos` for that of `hwloc`.
+  of the system `pmix` and `hwloc`.
+  `kokkos` asks it for the library and header folders of `hwloc`.
   `cryptominisat5`, `arjun`, `approxmc` and `ganak`
   find `gmp`, `mpfr` and `flint` through `pkg_check_modules`.
   These recipes generate `.pc` files with `PkgConfigDeps`,
@@ -92,7 +95,7 @@ instead of deleting it.
 CMakeDeps generates the package files a consumer uses.
 The rename keeps the upstream files out of the cmake search path,
 and they stay in the package.
-This binds `clingo`, `libtorch`, `ortools`, `rapidcheck`, `z3`,
+This binds `clingo`, `libtorch`, `ortools`, `rapidcheck`, `upcxx`, `z3`,
 and every recipe of the ganak family.
 
 `kokkos` is the exception.
@@ -122,7 +125,7 @@ A recipe that builds with CMake and installs libraries
 sets `CMAKE_INSTALL_LIBDIR` to `lib`.
 GNUInstallDirs otherwise picks `lib64` on 64-bit non-Debian Linux,
 which is outside the directories the recipe reports to consumers.
-This binds `clingo`, `libtorch`, `ortools`,
+This binds `clingo`, `kokkos`, `libtorch`, `ortools`,
 and every recipe of the ganak family.
 
 ### The meelgroup dependency lookup
@@ -153,6 +156,51 @@ so the recipes delete that line in `source()`.
 but it asks pkg-config for `gmp` alone, which adds no system library,
 so its recipe leaves the line in place.
 
+### The libtorch force link
+
+On Linux and FreeBSD, a shared `libtorch` package force links `libtorch.so`.
+`package_info` puts `-Wl,--no-as-needed,<path to libtorch.so>`
+and then `-Wl,--as-needed` in both `exelinkflags` and `sharedlinkflags`.
+`libtorch` is a shim with no code of its own that a consumer references.
+It carries a `DT_NEEDED` on `torch_cpu` and `c10`,
+and with CUDA on `torch_cuda` and `c10_cuda`.
+The linker default of `--as-needed` therefore drops it,
+and everything reachable only through it goes with it.
+What that costs is the registration that runs from static initializers.
+With `torch_cuda` dropped, nothing installs the CUDA hooks,
+and `torch::cuda::is_available()` answers false
+on a machine with a working GPU.
+Upstream hits this too,
+and force links the same way in the `torch` target of its own `Caffe2Targets.cmake`.
+The cost is that `-Wl,--as-needed` is switched back on after the shim,
+whatever the consumer had set before it.
+This binds `package_info` of `libtorch`.
+
+### The hdf5_plugins against a static hdf5
+
+hdf5 loads a filter into a process that already runs hdf5.
+A static hdf5 linked into the filter
+puts a second copy of the library in that process.
+A filter that calls back into hdf5 from its `set_local` callback
+then fails to recognize the property list of the caller.
+Linking hdf5 into each filter is therefore rejected.
+Against a static hdf5, `generate()` gives the filters the hdf5 headers
+through an interface target, and no hdf5 to link.
+The filters are built with the hdf5 symbols left undefined,
+and the process that loads them resolves those symbols.
+That lookup only finds them
+if the program put its own symbols in the dynamic symbol table.
+`package_info` asks for that with `-rdynamic` on Linux and FreeBSD,
+and with `-Wl,-export_dynamic` on macOS, in `exelinkflags`,
+so a consumer needs no change of its own.
+A dll cannot leave symbols undefined,
+so `validate` rejects a static hdf5 on Windows.
+The cost is that every consumer executable exports all its symbols.
+The recipe therefore defaults to `hdf5/*:shared=True`,
+and against a shared hdf5 the filters link `hdf5::hdf5` as usual.
+This binds `default_options`, `validate`, `generate` and `package_info`
+of `hdf5_plugins`.
+
 ### The upcxx flags file
 
 The `upcxx` recipe does not report flags
@@ -166,11 +214,6 @@ with every path inside the package made relative to the package folder.
 The cost is a parser of the `upcxx-meta` output in the recipe.
 It drops the GASNet-EX optimization and warning flags,
 and the `libgcc` that the compiler links on its own.
-
-The recipe calls `configure` itself instead of using `AutotoolsToolchain`.
-It also unsets `CFLAGS`, `CXXFLAGS`, `CPPFLAGS`, `LDFLAGS` and `LIBS`.
-UPC++ passes those to every code mode it builds,
-where they would replace the flags that tell the debug and opt code modes apart.
 
 ### The upcxx relocation
 

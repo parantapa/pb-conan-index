@@ -211,7 +211,7 @@ class LibTorchRecipe(ConanFile):
         tc.cache_variables["USE_XCCL"] = False
         tc.cache_variables["USE_UCC"] = False
 
-        # ---- optional CPU kernel libraries.
+        # ---- optional CPU kernel libraries
         tc.cache_variables["USE_FBGEMM"] = False
         tc.cache_variables["USE_NNPACK"] = False
         tc.cache_variables["USE_QNNPACK"] = False
@@ -247,9 +247,7 @@ class LibTorchRecipe(ConanFile):
         # while it configures.
         tc.cache_variables["USE_SYSTEM_EIGEN_INSTALL"] = True
 
-        # GNUInstallDirs picks lib64 on 64-bit non-Debian Linux,
-        # and that puts the libraries outside the directories
-        # this recipe reports to consumers.
+        # See "The library directory" in the developer notes.
         tc.cache_variables["CMAKE_INSTALL_LIBDIR"] = "lib"
 
         tc.generate()
@@ -293,8 +291,9 @@ class LibTorchRecipe(ConanFile):
         rmdir(self, os.path.join(self.package_folder, "lib", "pkgconfig"))
         rmdir(self, os.path.join(self.package_folder, "lib", "cmake"))
 
-        # The install tree carries the cmake package files of the vendored
-        # dependencies next to torch's own. Conan generates its own.
+        # The install tree carries the cmake package files
+        # of the vendored dependencies next to those of torch.
+        # See "The upstream cmake package files" in the developer notes.
         rename(
             self,
             os.path.join(self.package_folder, "share", "cmake"),
@@ -321,19 +320,9 @@ class LibTorchRecipe(ConanFile):
         if self.settings.os in ["Linux", "FreeBSD"]:
             self.cpp_info.system_libs = ["m", "dl", "pthread", "rt"]
 
-            # libtorch is a shim with no code of its own
-            # that a consumer references.
-            # It carries a DT_NEEDED on torch_cpu and c10,
-            # and with CUDA on torch_cuda and c10_cuda.
-            # The linker default of --as-needed therefore drops it,
-            # and everything reachable only through it goes with it.
-            # What that costs is the registration
-            # that runs from static initializers.
-            # With torch_cuda dropped, nothing installs the CUDA hooks,
-            # and torch::cuda::is_available() answers false
-            # on a machine with a working GPU.
-            # Upstream hits this too and force links the same way,
-            # in the torch target of its own Caffe2Targets.cmake.
+            # The linker default of --as-needed drops the libtorch shim,
+            # so a shared build force links it.
+            # See "The libtorch force link" in the developer notes.
             if self.options.shared:
                 torch_library = os.path.join(self.package_folder, "lib", "libtorch.so")
                 # One flag per list entry:

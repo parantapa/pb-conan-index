@@ -41,14 +41,8 @@ class StanMathRecipe(ConanFile):
         # and takes the dependencies from conancenter instead.
         self.requires("boost/1.91.0", transitive_headers=True)
 
-        # The recipe pins Eigen to the 3.4 series on purpose.
-        # Stan Math 5.3.0 injects its own plugin
-        # into Eigen's MatrixBase and ArrayBase,
-        # and reaches into Eigen internals from there.
         # eigen 5 dropped EIGEN_EMPTY_STRUCT_CTOR,
-        # so it fails to compile that plugin.
-        # It also crashes at run time
-        # once a build defines the macro back into place.
+        # which the Stan Math plugin for Eigen needs, so Eigen stays on 3.4.
         self.requires("eigen/3.4.1", transitive_headers=True)
 
         self.requires("sundials/7.5.0", transitive_headers=True, transitive_libs=True)
@@ -69,14 +63,9 @@ class StanMathRecipe(ConanFile):
     )
 
     def _patch_sources(self) -> None:
-        # Stan Math 5.3.0 targets the sundials 6.1 headers.
-        # There sundials/sundials_context.h declares both the C interface
-        # and the C++ sundials::Context wrapper,
-        # and sundials/sundials_types.h still exports the pre-6.0 realtype spelling.
-        # sundials 7 split the wrapper out into sundials_context.hpp,
-        # and moved realtype into sundials_types_deprecated.h.
-        # The recipe pulls those two headers in alongside the one
-        # Stan Math asks for, which is enough to build against it.
+        # sundials 7 moved sundials::Context into sundials_context.hpp
+        # and realtype into sundials_types_deprecated.h,
+        # so each user includes both after sundials_context.h.
         for name in self._sundials_users:
             replace_in_file(
                 self,
@@ -118,8 +107,8 @@ class StanMathRecipe(ConanFile):
         self.cpp_info.bindirs = []
         self.cpp_info.libdirs = []
 
-        # init_threadpool_tbb.hpp picks its threadpool interface by including
-        # tbb/tbb_stddef.h and reading TBB_VERSION_MAJOR from it.
+        # init_threadpool_tbb.hpp picks its threadpool interface
+        # by including tbb/tbb_stddef.h and reading TBB_VERSION_MAJOR from it.
         # oneTBB 2021 removed that header,
         # so this recipe makes the choice instead.
         self.cpp_info.defines = ["TBB_INTERFACE_NEW"]

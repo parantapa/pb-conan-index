@@ -21,6 +21,7 @@ class Random123(ConanFile):
     no_copy_source = True
 
     def source(self) -> None:
+        # See "The .pci version suffix" in the developer notes.
         tag = "v" + self.version.removesuffix(".pci")
 
         git = Git(self)
@@ -38,7 +39,8 @@ class Random123(ConanFile):
             dst=os.path.join(self.package_folder, "licenses"),
         )
 
-        # This pattern also copies the "include" folder
+        # The pattern keeps the include/ prefix,
+        # so the headers land in include/ of the package.
         copy(self, "include/*.h", self.source_folder, self.package_folder)
         copy(self, "include/*.hpp", self.source_folder, self.package_folder)
 

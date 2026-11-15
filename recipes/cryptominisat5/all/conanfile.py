@@ -48,6 +48,9 @@ class CryptoMiniSat5Recipe(ConanFile):
         check_min_cppstd(self, 20)
 
     def source(self) -> None:
+        # Unlike arjun, approxmc and ganak,
+        # this recipe keeps the upstream suffix order.
+        # See "The static library suffix order" in the developer notes.
         get(self, **self.conan_data["sources"][self.version], strip_root=True)
 
     def layout(self) -> None:

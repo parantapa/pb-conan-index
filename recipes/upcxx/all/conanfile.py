@@ -4,12 +4,14 @@ import json
 import os
 import re
 import shlex
+from collections.abc import Callable
 from io import StringIO
 
 from conan import ConanFile
 from conan.errors import ConanException, ConanInvalidConfiguration
 from conan.tools.files import copy, get, load, rename, save
 from conan.tools.build import build_jobs
+from conan.tools.env import VirtualBuildEnv
 from conan.tools.gnu import PkgConfig
 from conan.tools.layout import basic_layout
 
@@ -133,18 +135,23 @@ class UpcxxRecipe(ConanFile):
                 f"Cannot find the system {package} through pkg-config: {error}"
             ) from error
 
+    def _build_env(self, name: str) -> str | None:
+        # The [buildenv] of the profile reaches the commands that self.run starts,
+        # but not os.environ of the recipe itself.
+        return VirtualBuildEnv(self).vars().get(name) or os.environ.get(name)
+
     def _compilers(self) -> tuple[str, str]:
         executables = self.conf.get(
             "tools.build:compiler_executables", default={}, check_type=dict
         )
-        if self.settings.compiler == "clang":
+        if self.settings.compiler in ("clang", "apple-clang"):
             default_cc, default_cxx = "clang", "clang++"
         else:
             default_cc, default_cxx = "gcc", "g++"
-        cc = executables.get("c") or os.environ.get("CC") or default_cc
-        cxx = executables.get("cpp") or os.environ.get("CXX") or default_cxx
+        cc = executables.get("c") or self._build_env("CC") or default_cc
+        cxx = executables.get("cpp") or self._build_env("CXX") or default_cxx
         if self.options.mpi:
-            cxx = os.environ.get("MPICXX") or "mpicxx"
+            cxx = self._build_env("MPICXX") or "mpicxx"
         return cc, cxx
 
     def _configure_args(self) -> list[str]:
@@ -179,6 +186,9 @@ class UpcxxRecipe(ConanFile):
                 launch = "prterun"
             # The GASNet-EX configure resolves the launcher to an absolute path.
             # PMIRUN_CMD in the environment overrides it at run time.
+            # --with-pmi-version=x accepts only a PMIx client library.
+            # In the launch template, %N is the number of processes,
+            # %P is the program and %A is its arguments.
             args += [
                 "--enable-pmi",
                 f"--with-pmi-home={self._system_prefix('pmix')}",
@@ -202,16 +212,22 @@ class UpcxxRecipe(ConanFile):
 
         return args
 
+    # The UPC++ configure passes the flags in the environment
+    # to GASNet-EX and to every code mode it builds.
+    # Flags from the profile would then override the optimization and debug flags,
+    # which tell the opt and debug code modes apart.
+    # The recipe therefore calls configure itself
+    # instead of going through AutotoolsToolchain,
+    # and unsets these variables for configure, make and make install.
+    _unset_flags = "unset CFLAGS CXXFLAGS CPPFLAGS LDFLAGS LIBS"
+
     def build(self) -> None:
-        # The UPC++ configure passes CFLAGS, CXXFLAGS and LDFLAGS on
-        # to GASNet-EX and to every code mode it builds.
-        # Flags from the profile would then override
-        # the optimization and debug flags that tell the opt and debug
-        # code modes apart, so the recipe calls configure itself
-        # instead of going through AutotoolsToolchain.
-        gasnet_args = os.environ.get("GASNET_CONFIGURE_ARGS", "")
+        gasnet_args = self._build_env("GASNET_CONFIGURE_ARGS") or ""
+        # --enable-rpath links the GASNet-EX libraries
+        # with a run path to the system libraries they depend on,
+        # such as a pmix installed outside the default library path.
         gasnet_args = f"--enable-rpath {gasnet_args}".strip()
-        unset = "unset CFLAGS CXXFLAGS CPPFLAGS LDFLAGS LIBS"
+        unset = self._unset_flags
         configure = shlex.join(
             [os.path.join(self.source_folder, "configure"), *self._configure_args()]
         )
@@ -222,8 +238,7 @@ class UpcxxRecipe(ConanFile):
         self.run(f"{unset}; make -j{build_jobs(self)} all", cwd=self.build_folder)
 
     def package(self) -> None:
-        unset = "unset CFLAGS CXXFLAGS CPPFLAGS LDFLAGS LIBS"
-        self.run(f"{unset}; make install", cwd=self.build_folder)
+        self.run(f"{self._unset_flags}; make install", cwd=self.build_folder)
 
         licenses = os.path.join(self.package_folder, "licenses")
         copy(self, "LICENSE.txt", self.source_folder, licenses)
@@ -234,7 +249,7 @@ class UpcxxRecipe(ConanFile):
             os.path.join(licenses, "GASNet"),
         )
 
-        # CMakeDeps generates the package files a consumer uses.
+        # See "The upstream cmake package files" in the developer notes.
         rename(
             self,
             os.path.join(self.package_folder, "share", "cmake"),
@@ -242,13 +257,14 @@ class UpcxxRecipe(ConanFile):
         )
 
         self._make_relocatable()
-        self._check_relocatable()
-
+        # The flags come from the relocated scripts,
+        # so the check also covers a path that the parser left absolute.
         save(
             self,
             os.path.join(self.package_folder, self._flags_file),
             json.dumps(self._collect_flags(), indent=2, sort_keys=True),
         )
+        self._check_relocatable()
 
     # The token that stands for the install prefix in the inner upcxx-meta scripts.
     # The outer bin/upcxx-meta exports the variable.
@@ -260,7 +276,7 @@ class UpcxxRecipe(ConanFile):
     # Nothing reads the path back from them.
     _informational_files = ("upcxx_config.hpp", "config-details.txt")
 
-    def _rewrite(self, path: str, rewrite) -> None:
+    def _rewrite(self, path: str, rewrite: Callable[[str], str]) -> None:
         text = load(self, path)
         new_text = rewrite(text)
         if new_text == text:
@@ -273,36 +289,43 @@ class UpcxxRecipe(ConanFile):
         return f"{first}\n{insert}{rest}"
 
     def _make_relocatable(self) -> None:
-        # The UPC++ install writes its absolute prefix into the scripts it installs.
-        # This replaces the prefix in every file that reads it back
-        # with a path computed at run time from the location of the file.
-        # The package then works from any folder,
-        # such as another conan cache after a download.
+        # See "The upcxx relocation" in the developer notes.
         prefix = self.package_folder
-        pkg = self.package_folder
 
         def path(*parts: str) -> str:
-            return os.path.join(pkg, *parts)
+            return os.path.join(prefix, *parts)
 
-        # The outer upcxx-meta finds the prefix from its own path.
-        # upcxx.sh sources it, and users run it,
+        # upcxx.sh sources the outer upcxx-meta, and users run it,
         # and BASH_SOURCE names the file in both cases.
-        # The DUMP branch must not fork, so neither does this.
-        # upcxx.sh already takes the prefix as UPCXX_META minus two components.
+        # The path can be relative, such as ./upcxx-meta or bin//upcxx-meta,
+        # so the prefix is the folder of the script and then its parent.
+        # Stripping the last two components would give bin for ./upcxx-meta.
         outer_preamble = (
             '_upcxxi_self="${BASH_SOURCE[0]}"\n'
             '[[ "$_upcxxi_self" == /* ]] || _upcxxi_self="$PWD/$_upcxxi_self"\n'
-            'export UPCXXI_INSTALL_PREFIX="${_upcxxi_self%/*/*}"\n'
+            '_upcxxi_self="${_upcxxi_self%/*}"\n'
+            'if [[ "$_upcxxi_self" == */bin ]]; then\n'
+            '  export UPCXXI_INSTALL_PREFIX="${_upcxxi_self%/bin}"\n'
+            "else\n"
+            '  export UPCXXI_INSTALL_PREFIX="$_upcxxi_self/.."\n'
+            "fi\n"
             f"_upcxxi_token='{self._prefix_token}'\n"
         )
         dump_echo = '    echo "$line"\n'
-        # DUMP prints the lines of an inner script for its caller to evaluate.
-        # The caller may not have the variable,
-        # so DUMP puts the prefix itself in place of the token.
-        # The quotes make bash match the token literally,
-        # and keep a "&" in the prefix literal.
+        # The loop avoids ${line//pattern/replacement}.
+        # Bash 4.2 and older, such as the /bin/bash of macOS,
+        # keep the quotes of a quoted replacement in the output,
+        # and bash 5.2 expands a "&" in an unquoted one.
+        # The quotes in the patterns make bash match the token literally.
         dump_echo_new = (
-            '    echo "${line//"$_upcxxi_token"/"$UPCXXI_INSTALL_PREFIX"}"\n'
+            '    _upcxxi_rest="$line"\n'
+            "    line=\n"
+            '    while [[ "$_upcxxi_rest" == *"$_upcxxi_token"* ]]; do\n'
+            '      line="$line${_upcxxi_rest%%"$_upcxxi_token"*}'
+            '$UPCXXI_INSTALL_PREFIX"\n'
+            '      _upcxxi_rest="${_upcxxi_rest#*"$_upcxxi_token"}"\n'
+            "    done\n"
+            '    echo "$line$_upcxxi_rest"\n'
         )
 
         def outer_meta(text: str) -> str:
@@ -315,10 +338,8 @@ class UpcxxRecipe(ConanFile):
         self._rewrite(path("bin", "upcxx-meta"), outer_meta)
 
         # Each inner upcxx-meta assigns one variable per line.
-        # The token expands both when bash sources the file
-        # and when /bin/sh runs it with the variable in its environment.
-        # A single quoted value would not expand, so it becomes double quoted.
-        # That is safe only when the value holds nothing
+        # Turning a single quoted value into a double quoted one is safe
+        # only when the value holds nothing
         # that double quotes treat specially.
         single_quoted = re.compile(r"^(\w+)='([^']*)'$")
 
@@ -333,6 +354,12 @@ class UpcxxRecipe(ConanFile):
                                 f"upcxx-meta: cannot double quote {match.group(1)}."
                             )
                         line = f'{match.group(1)}="{match.group(2)}"'
+                    elif re.match(r"^\w+='", line):
+                        # The token would stay inside single quotes,
+                        # where it does not expand.
+                        raise ConanException(
+                            f"upcxx-meta: cannot relocate the line {line!r}."
+                        )
                     line = line.replace(prefix, self._prefix_token)
                 lines.append(line)
             return "\n".join(lines)
@@ -381,7 +408,7 @@ class UpcxxRecipe(ConanFile):
         for mak in glob.glob(
             path("gasnet.*", "include", "**", "*.mak"), recursive=True
         ):
-            gasnet_root = path(os.path.relpath(mak, pkg).split(os.sep)[0])
+            gasnet_root = path(os.path.relpath(mak, prefix).split(os.sep)[0])
             depth = len(
                 os.path.relpath(os.path.dirname(mak), gasnet_root).split(os.sep)
             )
@@ -428,14 +455,8 @@ class UpcxxRecipe(ConanFile):
                 "These files still hold the install prefix: " + ", ".join(sorted(left))
             )
 
-    def _collect_flags(self) -> dict:
-        # Every combination of code mode, thread mode and network
-        # has its own upcxx-meta script,
-        # which prints the flags that the upcxx compiler wrapper uses.
-        # The recipe records them once, at package time,
-        # with every path inside the package made relative to it.
-        # package_info then picks one combination,
-        # and needs no absolute path of the build machine.
+    def _collect_flags(self) -> dict[str, dict[str, list[str]]]:
+        # See "The upcxx flags file" in the developer notes.
         # The flags come through bin/upcxx-meta,
         # so every package build also runs the relocated scripts.
         flags = {}
@@ -459,7 +480,7 @@ class UpcxxRecipe(ConanFile):
         self.run(f"env {env} {shlex.quote(meta)} {variable}", stdout=output, quiet=True)
         return shlex.split(output.getvalue())
 
-    def _parse_meta(self, selection: dict[str, str]) -> dict:
+    def _parse_meta(self, selection: dict[str, str]) -> dict[str, list[str]]:
         package = os.path.realpath(self.package_folder)
 
         def relative(path: str) -> str | None:
@@ -494,7 +515,7 @@ class UpcxxRecipe(ConanFile):
                 folder = relative(token[2:])
                 if folder is not None:
                     result["libdirs"].append(folder)
-                elif "/gcc/" not in token:
+                elif not os.path.isfile(os.path.join(token[2:], "libgcc.a")):
                     result["linkflags"].append(token)
             elif token.startswith("-l"):
                 name = token[2:]

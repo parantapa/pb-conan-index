@@ -103,6 +103,10 @@ from the source the release tarball bundles,
 and links it in statically.
 The package therefore needs no recipe other than `hdf5`.
 
+The recipe adds its plugin directory to `HDF5_PLUGIN_PATH`,
+so hdf5 finds the filters
+as soon as a `VirtualRunEnv` or `VirtualBuildEnv` environment is active.
+
 See [The linkage of the hdf5 filters](../explanation/hdf5-plugin-linkage.md).
 
 ### kokkos
@@ -135,7 +139,7 @@ The default of both is `none`, which builds generic code.
 The CUDA toolkit, OpenMP and hwloc come from the build machine,
 not from conan.
 `hwloc`, off by default, enables the hwloc support of Kokkos.
-The recipe finds the install prefix of hwloc through pkg-config.
+The recipe finds the library and header folders of hwloc through pkg-config.
 Kokkos 5 has no libnuma support, so the recipe has no option for it.
 Conan neither provides nor records these dependencies,
 so the same ones must be present wherever the package is consumed.
@@ -144,9 +148,12 @@ so the same ones must be present wherever the package is consumed.
 It does not follow `build_type`.
 
 The profile must ask for `compiler.cppstd=20` or later.
-The build needs cmake 3.25 or newer on `PATH`,
-or the cmake that `tools.cmake:cmake_program` names.
-`validate_build` checks both before anything is compiled.
+The build needs cmake 3.25 or newer.
+It takes the cmake that `tools.cmake:cmake_program` names,
+or else the first one on the `PATH` of the build environment.
+That `PATH` puts a cmake from `tool_requires` before the system one.
+A `tool_requires` cmake older than 3.25 is rejected before anything is built.
+Any other cmake is checked when the build starts, before anything is compiled.
 
 ### libtorch
 
@@ -178,7 +185,6 @@ without a patch to `FindMKLDNN.cmake`.
 The other optional CPU kernel libraries are off:
 FBGEMM, NNPACK, QNNPACK, XNNPACK, KleidiAI and mimalloc.
 Each one is a vendored source tree of its own.
-Together they are most of what makes a stock PyTorch build slow.
 Without them, the build comes to about 1560 objects.
 
 The kineto profiler, ITT, NUMA, numpy, gflags and glog are off too.
@@ -329,38 +335,43 @@ The `zpp_bits` recipe packages the single header `zpp_bits.h`.
 
 ## CMake targets
 
-In CMake, `taskflow` is found as `find_package(Taskflow)`
-and linked as `Taskflow::Taskflow`.
-`rapidcheck` is found as `find_package(rapidcheck)`
-and linked as `rapidcheck`, without a namespace,
-which matches the target upstream exports.
-`z3` is found as `find_package(Z3)`
-and linked as `z3::libz3`.
-`clingo` is found as `find_package(Clingo)`
-and linked as `libclingo`, without a namespace,
-which matches the target upstream exports.
-`upcxx` is found as `find_package(UPCXX)`
-and linked as `UPCXX::upcxx`,
-which matches the target upstream exports.
-`kokkos` is found as `find_package(Kokkos)`
-and linked as `Kokkos::kokkos`,
-or as one of `Kokkos::kokkoscore`, `Kokkos::kokkoscontainers`,
+| Package | `find_package` | Target |
+| --- | --- | --- |
+| `approxmc` | `approxmc` | `approxmc` |
+| `arjun` | `arjun` | `arjun` |
+| `cadiback` | `cadiback` | `cadiback` |
+| `cadical` | `cadical` | `cadical` |
+| `clingo` | `Clingo` | `libclingo` |
+| `cryptominisat5` | `cryptominisat5` | `cryptominisat5` |
+| `ganak` | `ganak` | `ganak` |
+| `gurobi` | `gurobi` | `gurobi::gurobi` |
+| `hdf5_plugins` | `hdf5_plugins` | `hdf5_plugins::hdf5_plugins` |
+| `kokkos` | `Kokkos` | `Kokkos::kokkos` |
+| `libtorch` | `Torch` | `torch` |
+| `ortools` | `ortools` | `ortools::ortools` |
+| `random123` | `random123` | `random123::random123` |
+| `rapidcheck` | `rapidcheck` | `rapidcheck` |
+| `sbva` | `sbva` | `sbva` |
+| `stan_math` | `stan_math` | `stan_math::stan_math` |
+| `taskflow` | `Taskflow` | `Taskflow::Taskflow` |
+| `treedecomp` | `treedecomp` | `treedecomp` |
+| `upcxx` | `UPCXX` | `UPCXX::upcxx` |
+| `z3` | `Z3` | `z3::libz3` |
+| `zpp_bits` | `zpp_bits` | `zpp_bits::zpp_bits` |
+
+A target without a namespace matches the target upstream exports.
+So do the targets of `upcxx` and `kokkos`.
+`gurobi`, `hdf5_plugins`, `ortools`, `random123`, `stan_math` and `zpp_bits`
+use the conan defaults.
+
+`kokkos` also offers `Kokkos::kokkoscore`, `Kokkos::kokkoscontainers`,
 `Kokkos::kokkosalgorithms` and `Kokkos::kokkossimd`.
 These are the package files upstream installs, not ones CMakeDeps generates,
 so `kokkos_check` and the `Kokkos_DEVICES` and `Kokkos_ARCH` variables work too.
 In a CUDA build, every C++ file that uses Kokkos
 compiles through `nvcc_wrapper`, as upstream arranges.
 `nvcc` must be on `PATH`.
-`libtorch` is found as `find_package(Torch)`
-and linked as `torch`, without a namespace,
-which matches the target upstream exports.
-The other packages outside the ganak family use the conan defaults,
-so `random123` is `find_package(random123)` and `random123::random123`.
 
-Each recipe of the ganak family is found under its own name,
-as in `find_package(ganak)`.
-Its target carries the same name with no namespace,
-which matches the target upstream exports.
 The `cryptominisat5` package exports two targets,
 `cryptominisat5` and `oracle`,
 and the conan target `cryptominisat5::cryptominisat5` links both.
@@ -371,6 +382,3 @@ and the `zfp` codec archive that `h5zzfp` links against.
 `h5zzfp` carries the property list interface of `H5Zzfp.h`.
 hdf5 loads every other filter at run time,
 so nothing is left to link against.
-The recipe adds its plugin directory to `HDF5_PLUGIN_PATH` instead,
-so hdf5 finds the filters
-as soon as a `VirtualRunEnv` or `VirtualBuildEnv` environment is active.
