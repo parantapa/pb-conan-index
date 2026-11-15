@@ -57,12 +57,14 @@ so pyright reports nothing for these files.
 - Conan 2: every recipe subclasses `ConanFile`
   and uses the helpers in `conan.tools`.
 - CMake: most recipes build through `CMakeToolchain` and `CMake`,
+  with the cmake on `PATH`,
   and those that build against other recipes generate them with `CMakeDeps`.
+  `kokkos` checks for cmake 3.25 or newer in `validate_build`.
   `gurobi` builds with `make`,
   `upcxx` runs its own `configure` and then `make`,
   and the header only recipes have no build step.
 - pkg-config: `upcxx` asks pkg-config for the install prefix
-  of the system `pmix` and `hwloc`.
+  of the system `pmix` and `hwloc`, and `kokkos` for that of `hwloc`.
   `cryptominisat5`, `arjun`, `approxmc` and `ganak`
   find `gmp`, `mpfr` and `flint` through `pkg_check_modules`.
   These recipes generate `.pc` files with `PkgConfigDeps`,
@@ -92,6 +94,27 @@ The rename keeps the upstream files out of the cmake search path,
 and they stay in the package.
 This binds `clingo`, `libtorch`, `ortools`, `rapidcheck`, `z3`,
 and every recipe of the ganak family.
+
+`kokkos` is the exception.
+Its consumers use the upstream package files,
+and CMakeDeps generates nothing for it.
+The upstream files put the backend and architecture flags on the targets
+inside generator expressions.
+They find CUDAToolkit, OpenMP and hwloc,
+and they define `kokkos_check` and `kokkos_compilation`.
+In a CUDA build, they also set `RULE_LAUNCH_COMPILE`
+to `kokkos_launch_compiler`,
+which sends every compile that uses Kokkos through `nvcc_wrapper`.
+CMakeDeps can express none of this.
+The recipe sets `cmake_find_mode` to `none`,
+and puts `lib/cmake/Kokkos` in the `builddirs` of the `kokkoscore` component.
+CMakeToolchain reads `builddirs` from the components only,
+once a package has components.
+The cost is that the package files must work from any folder.
+The only absolute path upstream writes into them
+is a second hint for `nvcc_wrapper` in `KokkosConfigCommon.cmake`,
+and `package()` removes it.
+`package()` then fails if any text file still holds the install prefix.
 
 ### The library directory
 

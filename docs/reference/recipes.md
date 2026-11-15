@@ -11,6 +11,7 @@
 | `ganak` | `2.7.0.pci` | <https://github.com/meelgroup/ganak> |
 | `gurobi` | `13.0.0.pci` | <https://www.gurobi.com> |
 | `hdf5_plugins` | `2.2.0.pci` | <https://github.com/HDFGroup/hdf5_plugins> |
+| `kokkos` | `5.2.2.pci` | <https://github.com/kokkos/kokkos> |
 | `libtorch` | `2.14.0.pci` | <https://github.com/pytorch/pytorch> |
 | `ortools` | `9.15.pci` | <https://github.com/google/or-tools> |
 | `random123` | `1.14.0.pci` | <https://github.com/DEShawResearch/random123> |
@@ -103,6 +104,49 @@ and links it in statically.
 The package therefore needs no recipe other than `hdf5`.
 
 See [The linkage of the hdf5 filters](../explanation/hdf5-plugin-linkage.md).
+
+### kokkos
+
+The `kokkos` recipe packages the `kokkoscore`, `kokkoscontainers`,
+`kokkosalgorithms` and `kokkossimd` libraries,
+and the `nvcc_wrapper`, `kokkos_launch_compiler` and `hpcbind` tools.
+`shared` is on by default.
+Upstream always builds `kokkosalgorithms` and `kokkossimd` static,
+whatever `shared` says.
+`fPIC` is on by default, and applies to a static build.
+
+The backends are `serial`, `openmp`, `threads` and `cuda`,
+each behind an option of its own.
+Only `serial` is on by default.
+`openmp` and `threads` cannot be on together,
+and at least one of `serial`, `openmp` and `threads` must be on.
+The HPX, OpenACC, HIP, SYCL and NextSilicon backends are always off.
+
+`cuda` needs `cuda_arch`, the compute capability to build for,
+written as in spack, such as `80` or `89`.
+Kokkos builds for one GPU architecture at a time.
+The recipe does not let Kokkos detect the GPU of the build machine.
+`cpu_arch` picks the host architecture,
+written as the lower case suffix of the upstream `Kokkos_ARCH_<NAME>` option,
+such as `zen5`, `skx` or `armv9_grace`.
+`native` tunes for the build machine.
+The default of both is `none`, which builds generic code.
+
+The CUDA toolkit, OpenMP and hwloc come from the build machine,
+not from conan.
+`hwloc`, off by default, enables the hwloc support of Kokkos.
+The recipe finds the install prefix of hwloc through pkg-config.
+Kokkos 5 has no libnuma support, so the recipe has no option for it.
+Conan neither provides nor records these dependencies,
+so the same ones must be present wherever the package is consumed.
+
+`debug`, off by default, turns on the extra debug checks of Kokkos.
+It does not follow `build_type`.
+
+The profile must ask for `compiler.cppstd=20` or later.
+The build needs cmake 3.25 or newer on `PATH`,
+or the cmake that `tools.cmake:cmake_program` names.
+`validate_build` checks both before anything is compiled.
 
 ### libtorch
 
@@ -298,6 +342,15 @@ which matches the target upstream exports.
 `upcxx` is found as `find_package(UPCXX)`
 and linked as `UPCXX::upcxx`,
 which matches the target upstream exports.
+`kokkos` is found as `find_package(Kokkos)`
+and linked as `Kokkos::kokkos`,
+or as one of `Kokkos::kokkoscore`, `Kokkos::kokkoscontainers`,
+`Kokkos::kokkosalgorithms` and `Kokkos::kokkossimd`.
+These are the package files upstream installs, not ones CMakeDeps generates,
+so `kokkos_check` and the `Kokkos_DEVICES` and `Kokkos_ARCH` variables work too.
+In a CUDA build, every C++ file that uses Kokkos
+compiles through `nvcc_wrapper`, as upstream arranges.
+`nvcc` must be on `PATH`.
 `libtorch` is found as `find_package(Torch)`
 and linked as `torch`, without a namespace,
 which matches the target upstream exports.
