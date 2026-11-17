@@ -62,17 +62,20 @@ so pyright reports nothing for these files.
   `kokkos` needs cmake 3.22 or newer, from the system or from `tool_requires`.
   `validate` checks a `tool_requires` cmake,
   and `build` checks the cmake that the build environment runs.
-  `gurobi` builds with `make`,
+- Make and configure: `gurobi` builds with `make`.
   `upcxx` runs its own `configure` and then `make`,
+  without `AutotoolsToolchain`.
   `papi` runs its own `configure` and then `make` in the source tree,
-  and the header only recipes have no build step.
+  with the environment that `AutotoolsToolchain` writes.
+  The header only recipes have no build step.
 - pkg-config: `upcxx` asks pkg-config for the install prefix
   of the system `pmix` and `hwloc`.
   `kokkos` asks it for the library and header folders of `hwloc`.
   `cryptominisat5`, `arjun`, `approxmc` and `ganak`
   find `gmp`, `mpfr` and `flint` through `pkg_check_modules`.
-  These recipes generate `.pc` files with `PkgConfigDeps`,
+  Those four recipes generate `.pc` files with `PkgConfigDeps`,
   and take `pkgconf` as a tool requirement.
+  `upcxx` and `kokkos` run the pkg-config of the system.
 - Git: `libtorch`, `random123` and `rapidcheck` clone their source
   through `conan.tools.scm.Git` instead of downloading an archive.
 
@@ -98,6 +101,8 @@ The rename keeps the upstream files out of the cmake search path,
 and they stay in the package.
 This binds `clingo`, `libtorch`, `ortools`, `rapidcheck`, `upcxx`, `z3`,
 and every recipe of the ganak family.
+`libtorch` renames `share/cmake`,
+but deletes `lib/cmake`.
 
 `kokkos` is the exception.
 Its consumers use the upstream package files,
@@ -118,16 +123,34 @@ The cost is that the package files must work from any folder.
 The only absolute path upstream writes into them
 is a second hint for `nvcc_wrapper` in `KokkosConfigCommon.cmake`,
 and `package()` removes it.
-`package()` then fails if any text file still holds the install prefix.
+See "The install prefix check".
 
 ### The library directory
 
-A recipe that builds with CMake and installs libraries
-sets `CMAKE_INSTALL_LIBDIR` to `lib`.
+The recipes this section binds
+set `CMAKE_INSTALL_LIBDIR` to `lib`.
 GNUInstallDirs otherwise picks `lib64` on 64-bit non-Debian Linux,
 which is outside the directories the recipe reports to consumers.
 This binds `clingo`, `kokkos`, `libtorch`, `ortools`,
 and every recipe of the ganak family.
+
+### The install prefix check
+
+A recipe whose upstream install writes the install prefix into files
+checks the package at the end of `package()`.
+`_check_relocatable` fails the package build
+if any file still holds the absolute package folder.
+A new option or upstream release that installs another such file
+then fails the build,
+instead of shipping a package that only works in one folder.
+The cost is that `package()` reads every file of the package once.
+`kokkos` and `upcxx` skip a file that holds a NUL byte,
+because a binary carries their prefix only in debug and ident strings.
+`upcxx` also skips `upcxx_config.hpp` and `config-details.txt`,
+which only record the configure command.
+`papi` reads its binaries too,
+so that the check also catches a run path to the prefix.
+This binds `package()` of `kokkos`, `papi` and `upcxx`.
 
 ### The meelgroup dependency lookup
 
@@ -135,7 +158,7 @@ The libraries of the ganak family find each other
 through a `<name>_DIR` cache variable.
 Where the variable is empty,
 upstream fetches the dependency with FetchContent from its default branch.
-Each recipe sets the variable of every dependency
+Each recipe sets the variable of every dependency that upstream looks up this way
 to the generators folder, where CMakeDeps writes the config files.
 Each recipe also sets `FETCHCONTENT_FULLY_DISCONNECTED`,
 so a lookup that misses the variables fails at configure time
@@ -233,18 +256,17 @@ so that the package works from any folder.
   An inner script run on its own fails instead of printing paths under `/`.
 - `DUMP` prints the inner script for its caller to evaluate,
   so it puts the prefix itself in place of the token.
-- `bin/upcxx` and `test-upcxx-install.sh` find their folder with `cd -P`,
-  which follows a symbolic link back into the package.
+- `bin/upcxx` follows a symbolic link to itself with `readlink`,
+  and then finds its folder with `cd -P`.
+  `test-upcxx-install.sh` finds the package folder with `cd -P`
+  from the folder of `$0`.
 - The GASNet-EX `.pc` files use `${pcfiledir}`,
   and the `.mak` files compute `GASNET_PREFIX` from `MAKEFILE_LIST`.
 - The modulefile computes the prefix from `[info script]`.
 
-`upcxx_config.hpp` and `config-details.txt` keep the build path.
+`upcxx_config.hpp` and `config-details.txt` keep the absolute install prefix.
 They only record the configure command.
-After the rewrite, `package()` fails
-if any other text file still holds the prefix.
-A new conduit, option or upstream release
-that installs another such file then fails the package build,
-instead of shipping a package that only works in one folder.
+After the rewrite, `package()` checks the package,
+as "The install prefix check" describes.
 `package()` collects the flags through the rewritten `bin/upcxx-meta`,
 so every package build also runs the relocated scripts.

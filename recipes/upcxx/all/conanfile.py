@@ -101,8 +101,9 @@ class UpcxxRecipe(ConanFile):
     def package_id(self) -> None:
         # The install holds both the debug and the opt code mode,
         # and both the seq and the par thread mode.
-        # build_type and threadmode only pick which of them
-        # package_info reports, so neither changes the binary.
+        # build_type and threadmode only pick
+        # which of them package_info reports,
+        # so neither changes the binary.
         del self.info.settings.build_type
         del self.info.options.threadmode
 
@@ -212,12 +213,9 @@ class UpcxxRecipe(ConanFile):
 
         return args
 
-    # The UPC++ configure passes the flags in the environment
-    # to GASNet-EX and to every code mode it builds.
-    # Flags from the profile would then override the optimization and debug flags,
-    # which tell the opt and debug code modes apart.
-    # The recipe therefore calls configure itself
-    # instead of going through AutotoolsToolchain,
+    # Flags from the profile would reach every code mode,
+    # and override the flags that tell the opt and debug code modes apart.
+    # The recipe therefore runs configure itself, without AutotoolsToolchain,
     # and unsets these variables for configure, make and make install.
     _unset_flags = "unset CFLAGS CXXFLAGS CPPFLAGS LDFLAGS LIBS"
 
@@ -435,9 +433,7 @@ class UpcxxRecipe(ConanFile):
             )
 
     def _check_relocatable(self) -> None:
-        # A new conduit, option or upstream release can install
-        # another file that holds the prefix.
-        # This fails the package build instead of shipping that file.
+        # See "The install prefix check" in the developer notes.
         prefix = self.package_folder.encode()
         left = []
         for root, _, files in os.walk(self.package_folder):
@@ -456,9 +452,8 @@ class UpcxxRecipe(ConanFile):
             )
 
     def _collect_flags(self) -> dict[str, dict[str, list[str]]]:
-        # See "The upcxx flags file" in the developer notes.
-        # The flags come through bin/upcxx-meta,
-        # so every package build also runs the relocated scripts.
+        # See "The upcxx flags file" and "The upcxx relocation"
+        # in the developer notes.
         flags = {}
         for codemode in ("debug", "opt"):
             for threadmode in ("seq", "par"):
@@ -527,7 +522,8 @@ class UpcxxRecipe(ConanFile):
                 result["linkflags"].append(token)
 
         # LDFLAGS repeats the optimization and warning flags of GASNet-EX.
-        # Only the run path of the system libraries matters to a consumer.
+        # Only the run path of the system libraries and -pthread
+        # matter to a consumer.
         for token in self._meta_variable(selection, "LDFLAGS"):
             if token.startswith("-Wl,-rpath") or token == "-pthread":
                 result["linkflags"].append(token)

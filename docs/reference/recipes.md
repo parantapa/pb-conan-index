@@ -104,6 +104,10 @@ from the source the release tarball bundles,
 and links it in statically.
 The package therefore needs no recipe other than `hdf5`.
 
+The recipe defaults to `hdf5/*:shared=True`.
+Against a static hdf5, every consumer executable exports its symbols,
+and `validate` rejects a static hdf5 on Windows.
+
 The recipe adds its plugin directory to `HDF5_PLUGIN_PATH`,
 so hdf5 finds the filters
 as soon as a `VirtualRunEnv` or `VirtualBuildEnv` environment is active.
@@ -160,6 +164,9 @@ Any other cmake is checked when the build starts, before anything is compiled.
 
 The `libtorch` recipe packages the C++ API of PyTorch,
 CPU only unless `with_cuda` is set.
+It supports Linux, FreeBSD and macOS,
+and `validate` rejects any other operating system.
+`shared` is on by default.
 By default, it builds `libtorch`, `libtorch_cpu` and `libc10`,
 and nothing else.
 There is no ROCm, XPU, MPS, Vulkan or Metal,
@@ -192,6 +199,9 @@ The kineto profiler, ITT, NUMA, numpy, gflags and glog are off too.
 So are the python bindings, the test binaries,
 the lite interpreter and the lazy TorchScript backend.
 What remains is ATen, autograd, the JIT and the C++ frontend.
+
+`with_openmp`, on by default, sets `USE_OPENMP`,
+so ATen runs its CPU parallel loops on OpenMP.
 
 BLAS, LAPACK and the FFT backend come from the MKL
 installed on the build machine.
@@ -232,6 +242,14 @@ or the python, java and dotnet bindings.
 The build needs cmake 3.24 or newer,
 which upstream asks for at configure time.
 
+`shared` is on by default.
+or-tools registers its solvers through static initializers,
+which the linker drops from a static archive.
+A static build therefore loses GLOP and MathOpt at run time,
+unless every consumer links the whole archive.
+The public headers re-export abseil types,
+so a binary serves only the `compiler.cppstd` it was built with.
+
 ### papi
 
 The `papi` recipe packages the PAPI library, static by default,
@@ -253,6 +271,11 @@ The shared `libpapi.so` links `libpfm.so` instead,
 and a shared consumer links both.
 `libpapi.so` finds `libpfm.so` through a run path of `$ORIGIN`,
 so the package is relocatable.
+
+The utilities reach the `PATH` of a consumer through `VirtualRunEnv`
+when the requirement has the run trait.
+Conan sets that trait itself for a shared package.
+A consumer of the static package declares the requirement with `run=True`.
 
 `libsde` exports the counters of a program as software defined events.
 `sde_lib.hpp` needs `sde_lib.h` included before it.
@@ -358,7 +381,7 @@ because the upstream `upcxx` wrapper does not quote it.
 
 ### z3
 
-The `z3` recipe packages the C and C++ library only.
+The `z3` recipe packages the C and C++ library only, static by default.
 The z3 executable is not built,
 and neither are the python, java, dotnet, julia, ocaml and go bindings.
 
@@ -395,6 +418,7 @@ The `zpp_bits` recipe packages the single header `zpp_bits.h`.
 
 A target without a namespace matches the target upstream exports.
 So do the targets of `upcxx` and `kokkos`.
+The targets of `taskflow` and `z3` are set by the recipe.
 `gurobi`, `hdf5_plugins`, `ortools`, `random123`, `stan_math` and `zpp_bits`
 use the conan defaults.
 

@@ -47,8 +47,8 @@ class HDF5PluginsRecipe(ConanFile):
     package_type = "static-library"
     settings = "os", "compiler", "build_type", "arch"
     options = {_filter: [True, False] for _filter in _filters}
-    # A shared hdf5 is the default, because a static one
-    # makes every consumer export its symbols to the filters.
+    # A shared hdf5 is the default,
+    # because a static one makes every consumer export its symbols to the filters.
     # See "The hdf5_plugins against a static hdf5" in the developer notes.
     default_options = dict(
         {_filter: True for _filter in _filters},
@@ -77,7 +77,7 @@ class HDF5PluginsRecipe(ConanFile):
 
     @property
     def _upstream_version(self) -> str:
-        # See "The .pci version suffix" in the developer notes.
+        # See "The `.pci` version suffix" in the developer notes.
         return self.version.removesuffix(".pci")
 
     def source(self) -> None:
@@ -104,9 +104,8 @@ class HDF5PluginsRecipe(ConanFile):
         deps = CMakeDeps(self)
         deps.generate()
 
-        # Upstream looks for an hdf5 installed by the HDF Group cmake build,
-        # whose config file, components and targets
-        # are not the ones conan generates.
+        # Upstream looks for an hdf5 installed by the HDF Group cmake build.
+        # Its config file, components and targets are not the ones conan generates.
         # H5PL_HDF5_HEADER takes the branch upstream uses
         # when the plugins are built as part of a larger project.
         # Upstream then skips the search, and takes the hdf5 target as given.

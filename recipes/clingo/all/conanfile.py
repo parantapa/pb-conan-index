@@ -65,12 +65,14 @@ class ClingoRecipe(ConanFile):
         # and libclingo keeps unresolved clasp symbols.
         tc.cache_variables["BUILD_SHARED_LIBS"] = False
 
+        # A static consumer links the bundled libraries, see package_info().
+        # A shared build installs them for the cmake export only, see package().
         tc.variables["CLINGO_INSTALL_LIB"] = True
-
         tc.variables["CLASP_INSTALL_LIB"] = True
         tc.variables["LIB_POTASSCO_INSTALL_LIB"] = True
 
-        # Conan manages the rpath of the packaged libraries.
+        # A consumer finds a shared libclingo
+        # through the run environment that conan generates.
         tc.variables["CLINGO_MANAGE_RPATH"] = False
 
         tc.cache_variables["CMAKE_DISABLE_FIND_PACKAGE_BISON"] = True

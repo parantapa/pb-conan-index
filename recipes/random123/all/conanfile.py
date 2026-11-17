@@ -21,7 +21,7 @@ class Random123(ConanFile):
     no_copy_source = True
 
     def source(self) -> None:
-        # See "The .pci version suffix" in the developer notes.
+        # See "The `.pci` version suffix" in the developer notes.
         tag = "v" + self.version.removesuffix(".pci")
 
         git = Git(self)

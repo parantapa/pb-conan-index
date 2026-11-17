@@ -61,8 +61,9 @@ class PapiRecipe(ConanFile):
         get(self, **self.conan_data["sources"][self.version], strip_root=True)
 
     def generate(self) -> None:
-        # The toolchain puts the compiler, the flags of the profile
-        # and -fPIC in the environment that configure reads.
+        # The toolchain puts the compiler and the flags of the profile
+        # in the environment that configure reads,
+        # and -fPIC too when the fPIC option is on.
         AutotoolsToolchain(self).generate()
 
     @property
@@ -79,8 +80,9 @@ class PapiRecipe(ConanFile):
             f"--prefix={self.package_folder}",
             "--with-tests=no",
             "--disable-fortran",
-            # The utilities link the static library either way,
-            # so they need no run path to the package.
+            # With the static library off, configure links the utilities
+            # to the shared library, with a run path into the build folder.
+            # Building both kinds makes the utilities link the static library.
             # package() keeps only the library kind that the shared option picks.
             "--with-shared-lib=yes",
             "--with-static-lib=yes",
@@ -129,9 +131,9 @@ class PapiRecipe(ConanFile):
         self._check_relocatable()
 
     def _check_relocatable(self) -> None:
-        # A later release can install another file that holds the prefix,
-        # or set another run path.
-        # This fails the package build instead of shipping that file.
+        # See "The install prefix check" in the developer notes.
+        # Unlike kokkos and upcxx, it reads the binaries too,
+        # so that it also catches a run path to the prefix.
         prefix = self.package_folder.encode()
         left = []
         for file in glob.glob(
@@ -151,7 +153,9 @@ class PapiRecipe(ConanFile):
         self.cpp_info.set_property("cmake_target_name", "PAPI::PAPI")
         self.cpp_info.set_property("pkg_config_name", "papi")
 
-        system_libs = ["pthread", "dl", "m", "rt"]
+        # libpapi.a and libsde.a call pthread_once and dlopen.
+        # glibc before 2.34 keeps both outside libc.
+        system_libs = ["pthread", "dl"]
 
         papi = self.cpp_info.components["libpapi"]
         papi.set_property("cmake_target_name", "PAPI::papi")
@@ -170,5 +174,5 @@ class PapiRecipe(ConanFile):
         sde.libs = ["sde"]
         sde.system_libs = system_libs
 
-        # The papi_avail, papi_native_avail and other utilities.
+        # bin holds papi_avail, papi_native_avail and the other utilities.
         self.cpp_info.bindirs = ["bin"]

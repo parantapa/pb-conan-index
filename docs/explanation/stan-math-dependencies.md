@@ -8,7 +8,7 @@ so it does not compile that plugin.
 A build that defines the macro back into place segfaults at run time.
 
 `sundials` is the current `7.5.0`,
-which needs two small patches the recipe applies to the Stan Math headers.
+which needs two more includes, which the recipe adds to six Stan Math headers.
 Stan Math targets the sundials 6.1 headers,
 where `sundials/sundials_context.h` declares the C++ `sundials::Context`
 wrapper and `sundials/sundials_types.h` still exports `realtype`.

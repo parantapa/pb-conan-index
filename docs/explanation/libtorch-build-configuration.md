@@ -73,7 +73,8 @@ rather than clone 37 submodules to satisfy it.
 
 ## Force linking `libtorch.so`
 
-The target force links `libtorch.so` with `-Wl,--no-as-needed`.
+On Linux and FreeBSD, a shared build force links `libtorch.so`
+with `-Wl,--no-as-needed`.
 That library is a shim with no code of its own.
 The linker default of `--as-needed` therefore drops it,
 and with it everything reachable only through it.

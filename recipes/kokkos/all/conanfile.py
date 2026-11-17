@@ -261,11 +261,8 @@ class KokkosRecipe(ConanFile):
         cmake = CMake(self)
         cmake.install()
 
-        # kokkos_launch_compiler looks for nvcc_wrapper first in the package,
-        # through a path relative to the config file,
-        # and then in the install prefix.
-        # The second hint is the absolute path of the build machine,
-        # so the recipe drops it.
+        # Drop the second nvcc_wrapper hint, the absolute install prefix.
+        # See "The upstream cmake package files" in the developer notes.
         common = os.path.join(
             self.package_folder, self._cmake_folder, "KokkosConfigCommon.cmake"
         )
@@ -280,9 +277,7 @@ class KokkosRecipe(ConanFile):
         self._check_relocatable()
 
     def _check_relocatable(self) -> None:
-        # A new option or upstream release can install
-        # another file that holds the install prefix.
-        # This fails the package build instead of shipping that file.
+        # See "The install prefix check" in the developer notes.
         prefix = self.package_folder.encode()
         left = []
         for root, _, files in os.walk(self.package_folder):
@@ -309,8 +304,6 @@ class KokkosRecipe(ConanFile):
         # but carry no backend or architecture flags.
         core = self.cpp_info.components["kokkoscore"]
         core.libs = ["kokkoscore"]
-        # CMakeToolchain puts builddirs on CMAKE_PREFIX_PATH.
-        # With components, it reads them from the components only.
         core.builddirs = [self._cmake_folder]
         # Upstream adds KOKKOS_DEPENDENCE in CMakeLists.txt for kokkos_launch_compiler.
         core.defines = ["KOKKOS_DEPENDENCE"]

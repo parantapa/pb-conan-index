@@ -288,6 +288,7 @@ class LibTorchRecipe(ConanFile):
 
         rm(self, "*.a", os.path.join(self.package_folder, "lib"))
         rm(self, "libtorch_global_deps.*", os.path.join(self.package_folder, "lib"))
+        # CMakeDeps and PkgConfigDeps generate what a consumer uses.
         rmdir(self, os.path.join(self.package_folder, "lib", "pkgconfig"))
         rmdir(self, os.path.join(self.package_folder, "lib", "cmake"))
 

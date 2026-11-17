@@ -30,6 +30,9 @@ class SBVARecipe(ConanFile):
         "fPIC": [True, False],
     }
     default_options = {"shared": False, "fPIC": True}
+    # No eigen requirement: sbva.cpp includes the eigen 3.4.0
+    # that upstream vendors, through a private include path.
+    # No installed header includes eigen, so the vendored copy stays.
 
     def validate(self) -> None:
         check_min_cppstd(self, 17)
@@ -43,9 +46,6 @@ class SBVARecipe(ConanFile):
         cmake_layout(self, src_folder="sbva")
 
     def generate(self) -> None:
-        # No eigen requirement: sbva.cpp includes the eigen 3.4.0
-        # that upstream vendors, through a private include path.
-        # No installed header includes eigen, so the vendored copy stays.
         tc = CMakeToolchain(self)
 
         # See "The library directory" in the developer notes.
