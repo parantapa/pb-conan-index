@@ -64,6 +64,7 @@ so pyright reports nothing for these files.
   and `build` checks the cmake that the build environment runs.
   `gurobi` builds with `make`,
   `upcxx` runs its own `configure` and then `make`,
+  `papi` runs its own `configure` and then `make` in the source tree,
   and the header only recipes have no build step.
 - pkg-config: `upcxx` asks pkg-config for the install prefix
   of the system `pmix` and `hwloc`.

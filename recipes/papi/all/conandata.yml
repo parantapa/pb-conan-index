@@ -1,0 +1,4 @@
+sources:
+  "7.2.0.pci":
+    url: "https://github.com/icl-utk-edu/papi/releases/download/papi-7-2-0-t/papi-7.2.0.tar.gz"
+    sha256: "a9bff89ccf39915d729e08ae0a0c6a71ce0ebbe98411e9a2eb3c83c8db0af39c"

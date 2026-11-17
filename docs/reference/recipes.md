@@ -14,6 +14,7 @@
 | `kokkos` | `5.2.2.pci` | <https://github.com/kokkos/kokkos> |
 | `libtorch` | `2.14.0.pci` | <https://github.com/pytorch/pytorch> |
 | `ortools` | `9.15.pci` | <https://github.com/google/or-tools> |
+| `papi` | `7.2.0.pci` | <https://github.com/icl-utk-edu/papi> |
 | `random123` | `1.14.0.pci` | <https://github.com/DEShawResearch/random123> |
 | `rapidcheck` | `20260806.pci` | <https://github.com/emil-e/rapidcheck> |
 | `sbva` | `20260912.pci` | <https://github.com/meelgroup/sbva> |
@@ -231,6 +232,34 @@ or the python, java and dotnet bindings.
 The build needs cmake 3.24 or newer,
 which upstream asks for at configure time.
 
+### papi
+
+The `papi` recipe packages the PAPI library, static by default,
+with the libpfm4 that its release tarball bundles.
+It supports Linux only, and does not cross build,
+because the PAPI configure script inspects the build machine.
+The package holds `libpapi`, `libpfm` and `libsde`, the headers,
+and the `papi_avail`, `papi_native_avail` and other utilities.
+The utilities are linked statically against PAPI,
+so they run without the package library folder on the library path.
+
+The recipe builds the default PAPI components only:
+`perf_event`, `perf_event_uncore` and `sysdetect`.
+The Fortran bindings, the tests and the manual pages are not packaged.
+
+The static `libpapi.a` holds the objects of libpfm4,
+so a static consumer links `libpapi` alone.
+The shared `libpapi.so` links `libpfm.so` instead,
+and a shared consumer links both.
+`libpapi.so` finds `libpfm.so` through a run path of `$ORIGIN`,
+so the package is relocatable.
+
+`libsde` exports the counters of a program as software defined events.
+`sde_lib.hpp` needs `sde_lib.h` included before it.
+
+To read hardware counters,
+the kernel must allow it through `/proc/sys/kernel/perf_event_paranoid`.
+
 ### random123
 
 The `random123` recipe packages the headers only.
@@ -353,6 +382,7 @@ The `zpp_bits` recipe packages the single header `zpp_bits.h`.
 | `kokkos` | `Kokkos` | `Kokkos::kokkos` |
 | `libtorch` | `Torch` | `torch` |
 | `ortools` | `ortools` | `ortools::ortools` |
+| `papi` | `PAPI` | `PAPI::PAPI` |
 | `random123` | `random123` | `random123::random123` |
 | `rapidcheck` | `rapidcheck` | `rapidcheck` |
 | `sbva` | `sbva` | `sbva` |
@@ -379,6 +409,11 @@ compiles through `nvcc_wrapper`, as upstream arranges.
 The `cryptominisat5` package exports two targets,
 `cryptominisat5` and `oracle`,
 and the conan target `cryptominisat5::cryptominisat5` links both.
+
+PAPI installs no cmake package files.
+The `papi` package exports two component targets,
+`PAPI::papi` for `libpapi` and `PAPI::sde` for `libsde`,
+and `PAPI::PAPI` links both.
 
 `hdf5_plugins` sets no cmake target name of its own.
 With the `zfp` option on, it packages the `h5zzfp` static library
